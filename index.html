@@ -294,7 +294,7 @@
       cart.forEach(item => {
         const sum = item.price * item.qty;
         total += sum;
-        message += `**${item.code}** | ${item.name}\n`;   // Код жирним
+        message += `${item.code} | ${item.name}\n`;   // Код без **
         message += `Кількість: ${item.qty} шт. | Ціна: ${item.price} грн | Сума: ${sum} грн\n`;
         message += "----------------------------------------\n";
       });
