@@ -264,75 +264,76 @@
     }
 
     async function submitOrder(e) {
-      e.preventDefault();
-      
-      const clientName = document.getElementById('client-name').value.trim();
-      if (!clientName) return alert("Введіть назву клієнта!");
+  e.preventDefault();
+  
+  const clientName = document.getElementById('client-name').value.trim();
+  if (!clientName) return alert("Введіть назву клієнта!");
 
-      const note = document.getElementById('note').value.trim();
+  const note = document.getElementById('note').value.trim();
 
-      let html = `
-        <h2>Нове замовлення</h2>
-        <p><strong>Клієнт:</strong> ${clientName}</p>
-        <p><strong>Дата:</strong> ${new Date().toLocaleString('uk-UA')}</p>
-        <br>
-        <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #ccc;">
-          <thead>
-            <tr style="background-color: #f0f0f0;">
-              <th>Код</th>
-              <th>Назва товару</th>
-              <th>Кількість</th>
-              <th>Ціна за од.</th>
-              <th>Сума</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+  let html = `
+    <h2 style="color: #1e40af;">Нове замовлення</h2>
+    <p><strong>Клієнт:</strong> ${clientName}</p>
+    <p><strong>Дата:</strong> ${new Date().toLocaleString('uk-UA')}</p>
+    <br>
+    <table border="1" cellpadding="10" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #ccc; font-family: Arial, sans-serif;">
+      <thead>
+        <tr style="background-color: #e0f2fe;">
+          <th style="text-align: left; padding: 10px;">Код</th>
+          <th style="text-align: left; padding: 10px;">Назва товару</th>
+          <th style="text-align: center; padding: 10px;">Кількість</th>
+          <th style="text-align: right; padding: 10px;">Ціна за од.</th>
+          <th style="text-align: right; padding: 10px;">Сума</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
-      let total = 0;
-      cart.forEach(item => {
-        const sum = item.price * item.qty;
-        total += sum;
-        html += `
-          <tr>
-            <td>${item.code}</td>
-            <td>${item.name}</td>
-            <td align="center">${item.qty}</td>
-            <td align="right">${item.price} грн</td>
-            <td align="right">${sum} грн</td>
-          </tr>
-        `;
-      });
+  let total = 0;
+  cart.forEach(item => {
+    const sum = item.price * item.qty;
+    total += sum;
+    html += `
+      <tr>
+        <td style="padding: 10px;">${item.code}</td>
+        <td style="padding: 10px;">${item.name}</td>
+        <td style="text-align: center; padding: 10px;">${item.qty}</td>
+        <td style="text-align: right; padding: 10px;">${item.price} грн</td>
+        <td style="text-align: right; padding: 10px; font-weight: bold;">${sum} грн</td>
+      </tr>
+    `;
+  });
 
-      html += `
-          </tbody>
-        </table>
-        <br>
-        <p><strong>Всього до сплати: ${total} грн</strong></p>
-      `;
+  html += `
+      </tbody>
+    </table>
+    <br>
+    <p><strong style="font-size: 18px;">Всього до сплати: ${total} грн</strong></p>
+  `;
 
-      if (note) html += `<p><strong>Примітка:</strong> ${note}</p>`;
+  if (note) html += `<p><strong>Примітка:</strong> ${note}</p>`;
 
-      const formData = new FormData();
-      formData.append('message', html);
-      formData.append('_subject', `Замовлення від ${clientName}`);
+  const formData = new FormData();
+  formData.append('message', html);
+  formData.append('_subject', `Замовлення від ${clientName}`);
+  formData.append('_html', 'true');   // ← Це важливо!
 
-      try {
-        await fetch('https://formspree.io/f/mlgqrbdw', {
-          method: 'POST',
-          body: formData,
-          headers: { 'Accept': 'application/json' }
-        });
+  try {
+    await fetch('https://formspree.io/f/mlgqrbdw', {
+      method: 'POST',
+      body: formData,
+      headers: { 'Accept': 'application/json' }
+    });
 
-        alert('✅ Замовлення успішно відправлено на zaharov.and.nikol@gmail.com!');
-        cart = [];
-        updateCartCount();
-        hideOrderForm();
-        toggleCart();
-      } catch (err) {
-        alert('Помилка відправки. Спробуйте пізніше.');
-      }
-    }
+    alert('✅ Замовлення успішно відправлено!');
+    cart = [];
+    updateCartCount();
+    hideOrderForm();
+    toggleCart();
+  } catch (err) {
+    alert('Помилка відправки. Спробуйте пізніше.');
+  }
+}
 
     window.onload = function() {
       init();
