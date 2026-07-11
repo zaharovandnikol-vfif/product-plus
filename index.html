@@ -22,7 +22,6 @@
       display: none;
       z-index: 50;
     }
-    .product-list { padding-top: 20px; }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -40,7 +39,7 @@
     </div>
   </header>
 
-  <!-- Пошук (закріплений) -->
+  <!-- Закріплений пошук -->
   <div class="sticky-search border-b">
     <div class="max-w-7xl mx-auto px-4 py-4">
       <div class="flex flex-col md:flex-row gap-4">
@@ -54,7 +53,7 @@
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto px-4 py-6 product-list">
+  <div class="max-w-7xl mx-auto px-4 py-8">
     <div id="products" class="space-y-3"></div>
   </div>
 
@@ -296,52 +295,27 @@
 
       const note = document.getElementById('note').value.trim();
 
-      let html = `
-        <h2 style="color: #1e40af; margin-bottom: 10px;">Нове замовлення</h2>
-        <p><strong>Клієнт:</strong> ${clientName}</p>
-        <p><strong>Дата:</strong> ${new Date().toLocaleString('uk-UA')}</p>
-        <br>
-        <table border="1" cellpadding="10" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #ccc;">
-          <thead>
-            <tr style="background-color: #e0f2fe;">
-              <th style="text-align: left; padding: 10px;">Код</th>
-              <th style="text-align: left; padding: 10px;">Назва товару</th>
-              <th style="text-align: center; padding: 10px;">Кількість</th>
-              <th style="text-align: right; padding: 10px;">Ціна</th>
-              <th style="text-align: right; padding: 10px;">Сума</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+      let message = `Нове замовлення\n\n`;
+      message += `Клієнт: ${clientName}\n`;
+      message += `Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
+      message += "Товари:\n";
+      message += "----------------------------------------\n";
 
       let total = 0;
       cart.forEach(item => {
         const sum = item.price * item.qty;
         total += sum;
-        html += `
-          <tr>
-            <td style="padding: 10px;">${item.code}</td>
-            <td style="padding: 10px;">${item.name}</td>
-            <td style="text-align: center; padding: 10px;">${item.qty}</td>
-            <td style="text-align: right; padding: 10px;">${item.price} грн</td>
-            <td style="text-align: right; padding: 10px; font-weight: bold;">${sum} грн</td>
-          </tr>
-        `;
+        message += `${item.code} | ${item.name}\n`;
+        message += `Кількість: ${item.qty} шт. | Ціна: ${item.price} грн | Сума: ${sum} грн\n`;
+        message += "----------------------------------------\n";
       });
 
-      html += `
-          </tbody>
-        </table>
-        <br>
-        <p><strong style="font-size: 18px; color: #1e40af;">Всього до сплати: ${total} грн</strong></p>
-      `;
-
-      if (note) html += `<p><strong>Примітка:</strong> ${note}</p>`;
+      message += `\nВсього до сплати: ${total} грн\n`;
+      if (note) message += `\nПримітка: ${note}`;
 
       const formData = new FormData();
-      formData.append('message', html);
+      formData.append('message', message);
       formData.append('_subject', `Замовлення від ${clientName}`);
-      formData.append('_html', 'true');
 
       try {
         await fetch('https://formspree.io/f/mlgqrbdw', {
@@ -360,7 +334,6 @@
       }
     }
 
-    // Кнопка "Вгору"
     window.onscroll = function() {
       document.getElementById('back-to-top').style.display = (window.scrollY > 400) ? "block" : "none";
     };
