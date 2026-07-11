@@ -265,25 +265,56 @@
 
     async function submitOrder(e) {
       e.preventDefault();
+      
       const clientName = document.getElementById('client-name').value.trim();
       if (!clientName) return alert("Введіть назву клієнта!");
 
       const note = document.getElementById('note').value.trim();
 
-      let text = `Нове замовлення від: ${clientName}\n\n`;
-      text += `Дата: ${new Date().toLocaleString('uk-UA')}\n\nТовари:\n`;
+      let html = `
+        <h2>Нове замовлення</h2>
+        <p><strong>Клієнт:</strong> ${clientName}</p>
+        <p><strong>Дата:</strong> ${new Date().toLocaleString('uk-UA')}</p>
+        <br>
+        <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid #ccc;">
+          <thead>
+            <tr style="background-color: #f0f0f0;">
+              <th>Код</th>
+              <th>Назва товару</th>
+              <th>Кількість</th>
+              <th>Ціна за од.</th>
+              <th>Сума</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
 
       let total = 0;
       cart.forEach(item => {
         const sum = item.price * item.qty;
-        text += `${item.code} | ${item.name} | ${item.qty} шт. | ${sum} грн\n`;
         total += sum;
+        html += `
+          <tr>
+            <td>${item.code}</td>
+            <td>${item.name}</td>
+            <td align="center">${item.qty}</td>
+            <td align="right">${item.price} грн</td>
+            <td align="right">${sum} грн</td>
+          </tr>
+        `;
       });
-      text += `\nВсього: ${total} грн\n`;
-      if (note) text += `\nПримітка: ${note}`;
+
+      html += `
+          </tbody>
+        </table>
+        <br>
+        <p><strong>Всього до сплати: ${total} грн</strong></p>
+      `;
+
+      if (note) html += `<p><strong>Примітка:</strong> ${note}</p>`;
 
       const formData = new FormData();
-      formData.append('message', text);
+      formData.append('message', html);
       formData.append('_subject', `Замовлення від ${clientName}`);
 
       try {
@@ -299,7 +330,7 @@
         hideOrderForm();
         toggleCart();
       } catch (err) {
-        alert('Помилка відправки. Перевірте Formspree або спробуйте пізніше.');
+        alert('Помилка відправки. Спробуйте пізніше.');
       }
     }
 
