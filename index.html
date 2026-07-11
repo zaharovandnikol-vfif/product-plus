@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Продукт Плюс — Оптовий магазин</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    .product-card { transition: all 0.2s; }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <header class="bg-blue-700 text-white sticky top-0 z-50 shadow">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-3xl font-bold flex items-center gap-3">
+        <i class="fas fa-store"></i> Продукт Плюс
+      </h1>
+      <button onclick="toggleCart()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl transition">
+        <i class="fas fa-shopping-cart"></i>
+        <span id="cart-count" class="bg-white text-blue-700 rounded-full px-3 py-1 text-sm font-bold">0</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row gap-4 mb-8">
+      <input id="search" type="text" placeholder="🔍 Пошук по назві або коду..." 
+             class="flex-1 px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
+      <select id="category" onchange="filterProducts()" 
+              class="w-full md:w-72 px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
+        <option value="">Всі групи</option>
+      </select>
+    </div>
+
+    <div id="products" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+  </div>
+
+  <div id="status" class="text-center text-sm py-4 text-gray-500"></div>
+
+  <script>
+    let products = [];
+    let cart = [];
+
+    async function loadProducts() {
+      const status = document.getElementById('status');
+      status.textContent = 'Завантаження каталогу...';
+
+      try {
+        const url = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
+        const proxy = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+        
+        const res = await fetch(proxy);
+        const text = await res.text();
+
+        products = parseCSV(text);
+
+        if (products.length > 0) {
+          populateCategories();
+          renderProducts();
+          status.textContent = `✅ Завантажено ${products.length} позицій`;
+        } else {
+          status.textContent = "Не вдалося завантажити товари";
+        }
+      } catch (err) {
+        status.innerHTML = '❌ Помилка завантаження. Спробуйте пізніше.';
+        console.error(err);
+      }
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const result = [];
+      let currentGroup = "";
+
+      for (let i = 1; i < lines.length; i++) {
+        let line = lines[i];
+        if (!line.trim()) continue;
+
+        line = line.replace(/"([^"]*)"/g, m => m.replace(/,/g, '§'));
+        const cells = line.split(',').map(c => c.replace(/§/g, ',').replace(/^"|"$/g, '').trim());
+
+        if (cells[1] && cells[1].startsWith("ТМЦ /")) {
+          currentGroup = cells[1].replace("ТМЦ /", "").trim();
+          continue;
+        }
+
+        if (cells[2]) {
+          let priceStr = (cells[4] || cells[3] || "").replace(/[^0-9.,]/g, '').replace(',', '.');
+          const price = parseFloat(priceStr) || 0;
+
+          result.push({
+            id: cells[1] || String(i),
+            code: cells[1] || '',
+            name: cells[2],
+            price: price,
+            group: currentGroup
+          });
+        }
+      }
+      return result;
+    }
+
+    function populateCategories() {
+      const groups = [...new Set(products.map(p => p.group).filter(Boolean))].sort();
+      const select = document.getElementById('category');
+      groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderProducts(filtered = products) {
+      const container = document.getElementById('products');
+      container.innerHTML = '';
+
+      filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "product-card bg-white rounded-3xl p-6 border";
+        card.innerHTML = `
+          <div class="text-xs text-gray-500 mb-1">${p.code}</div>
+          <div class="font-medium leading-tight mb-4 min-h-[3.5rem]">${p.name}</div>
+          <div class="flex justify-between items-center">
+            <div class="text-2xl font-bold text-blue-700">${p.price} грн</div>
+            <button onclick="addToCart('${p.id}')" 
+                    class="bg-blue-600 text-white px-5 py-2.5 rounded-2xl hover:bg-blue-700 text-sm">
+              + В кошик
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function filterProducts() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const category = document.getElementById('category').value;
+
+      const filtered = products.filter(p => {
+        const matchSearch = !search || p.name.toLowerCase().includes(search) || p.code.includes(search);
+        const matchCat = !category || p.group === category;
+        return matchSearch && matchCat;
+      });
+
+      renderProducts(filtered);
+    }
+
+    function addToCart(id) {
+      const p = products.find(x => x.id === id);
+      if (p) alert(`✅ Додано в кошик:\n${p.name}\n${p.price} грн`);
+    }
+
+    function toggleCart() {
+      alert("Кошик буде додано в наступній версії");
+    }
+
+    // Запуск
+    window.onload = loadProducts;
+  </script>
+</body>
+</html>
