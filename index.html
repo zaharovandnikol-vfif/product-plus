@@ -17,9 +17,9 @@
       <h1 class="text-3xl font-bold flex items-center gap-3">
         <i class="fas fa-store"></i> Продукт Плюс
       </h1>
-      <button onclick="toggleCart()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl transition">
+      <button onclick="toggleCart()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl transition relative">
         <i class="fas fa-shopping-cart"></i>
-        <span id="cart-count" class="bg-white text-blue-700 rounded-full px-3 py-1 text-sm font-bold">0</span>
+        <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
       </button>
     </div>
   </header>
@@ -39,28 +39,72 @@
 
   <div id="status" class="text-center text-sm py-8 text-gray-500"></div>
 
+  <!-- Кошик -->
+  <div id="cart-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col m-4">
+      <div class="p-6 border-b flex justify-between items-center">
+        <h2 class="text-2xl font-bold">Ваш кошик</h2>
+        <button onclick="toggleCart()" class="text-3xl leading-none hover:text-gray-500">×</button>
+      </div>
+      
+      <div id="cart-items" class="flex-1 overflow-auto p-6 space-y-4"></div>
+      
+      <div class="p-6 border-t">
+        <div class="flex justify-between text-xl font-bold mb-6">
+          <span>Разом:</span>
+          <span id="cart-total">0 грн</span>
+        </div>
+        <button onclick="showOrderForm()" 
+                class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl text-lg font-semibold transition">
+          Оформити замовлення
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Форма замовлення -->
+  <div id="order-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-3xl w-full max-w-lg p-8 m-4">
+      <h2 class="text-2xl font-bold mb-6">Оформлення замовлення</h2>
+      <form id="order-form" onsubmit="submitOrder(event)">
+        <input type="text" id="client-name" placeholder="Назва клієнта (ФОП або магазин)" required
+               class="w-full px-5 py-4 border rounded-2xl mb-4 focus:outline-none focus:border-blue-500">
+        
+        <textarea id="note" placeholder="Примітка до замовлення (необов'язково)" rows="4"
+                  class="w-full px-5 py-4 border rounded-2xl mb-6 focus:outline-none focus:border-blue-500"></textarea>
+        
+        <div class="flex gap-4">
+          <button type="button" onclick="hideOrderForm()" 
+                  class="flex-1 py-4 border border-gray-300 rounded-2xl font-medium">Скасувати</button>
+          <button type="submit" 
+                  class="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-semibold">Відправити на пошту</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let products = [];
     let cart = [];
 
     async function init() {
       const status = document.getElementById('status');
-      status.textContent = 'Завантаження каталогу...';
+      status.textContent = 'Завантаження...';
 
       try {
         const response = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv'));
         const text = await response.text();
         products = parseCSV(text);
 
-        status.textContent = `✅ Завантажено ${products.length} товарів`;
+        status.textContent = `✅ ${products.length} товарів`;
         populateCategories();
         renderProducts();
       } catch(e) {
-        status.textContent = '❌ Помилка завантаження. Оновіть сторінку.';
+        status.textContent = '❌ Помилка завантаження';
       }
     }
 
-    function parseCSV(text) {
+    function parseCSV(text) { /* та сама функція */ 
       const lines = text.trim().split('\n');
       const result = [];
       let currentGroup = "";
@@ -122,16 +166,13 @@
               </div>
               <div class="font-medium mt-1 text-lg leading-tight">${p.name}</div>
             </div>
-            
             <div class="flex items-center gap-6">
               <div>
                 <div class="text-sm text-gray-500">Ціна:</div>
                 <div class="text-2xl font-bold text-blue-700">${p.price} грн</div>
               </div>
-              <button onclick="addToCart('${p.id}')" 
-                      class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl transition flex items-center gap-2 whitespace-nowrap">
+              <button onclick="addToCart('${p.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl transition">
                 <i class="fas fa-cart-plus"></i>
-                <span class="hidden sm:inline">В кошик</span>
               </button>
             </div>
           </div>
@@ -145,9 +186,7 @@
       const category = document.getElementById('category').value;
 
       const filtered = products.filter(p => {
-        const matchSearch = !search || 
-          p.name.toLowerCase().includes(search) || 
-          (p.code && p.code.toLowerCase().includes(search));
+        const matchSearch = !search || p.name.toLowerCase().includes(search) || p.code.toLowerCase().includes(search);
         const matchCat = !category || p.group === category;
         return matchSearch && matchCat;
       });
@@ -156,19 +195,132 @@
     }
 
     function addToCart(id) {
-      const p = products.find(x => x.id === id);
-      if (p) alert(`✅ Додано в кошик:\n${p.name}\nКод: ${p.code}\nЦіна: ${p.price} грн`);
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      const existing = cart.find(item => item.id === id);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({...product, qty: 1});
+      }
+      updateCartCount();
+      alert(`✅ ${product.name} додано в кошик`);
+    }
+
+    function updateCartCount() {
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      document.getElementById('cart-count').textContent = count;
     }
 
     function toggleCart() {
-      alert("Повний кошик буде додано пізніше");
+      const modal = document.getElementById('cart-modal');
+      modal.classList.toggle('hidden');
+      renderCart();
     }
 
-    // Живий пошук при введенні
-    window.onload = function() {
-      init();
-      document.getElementById('search').addEventListener('input', filterProducts);
-    };
+    function renderCart() {
+      const container = document.getElementById('cart-items');
+      container.innerHTML = '';
+      let total = 0;
+
+      if (cart.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-12">Кошик порожній</p>`;
+        document.getElementById('cart-total').textContent = '0 грн';
+        return;
+      }
+
+      cart.forEach((item, index) => {
+        const sum = item.price * item.qty;
+        total += sum;
+
+        const div = document.createElement('div');
+        div.className = "flex gap-4 bg-gray-50 p-4 rounded-2xl";
+        div.innerHTML = `
+          <div class="flex-1">
+            <div class="font-medium">${item.name}</div>
+            <div class="text-sm text-gray-500">${item.code} — ${item.price} грн</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <input type="number" value="${item.qty}" min="1" class="w-20 text-center border rounded-xl py-2" 
+                   onchange="changeQty(${index}, this.value)">
+            <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 px-2">
+              ✕
+            </button>
+          </div>
+          <div class="w-24 text-right font-semibold">${sum} грн</div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('cart-total').textContent = total + ' грн';
+    }
+
+    function changeQty(index, newQty) {
+      cart[index].qty = parseInt(newQty) || 1;
+      renderCart();
+      updateCartCount();
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      renderCart();
+      updateCartCount();
+    }
+
+    function showOrderForm() {
+      if (cart.length === 0) return alert("Кошик порожній!");
+      document.getElementById('cart-modal').classList.add('hidden');
+      document.getElementById('order-modal').classList.remove('hidden');
+    }
+
+    function hideOrderForm() {
+      document.getElementById('order-modal').classList.add('hidden');
+    }
+
+    async function submitOrder(e) {
+      e.preventDefault();
+      
+      const clientName = document.getElementById('client-name').value.trim();
+      const note = document.getElementById('note').value.trim();
+
+      let text = `Нове замовлення від: ${clientName}\n\n`;
+      text += `Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
+      text += "Товари:\n";
+
+      let total = 0;
+      cart.forEach(item => {
+        const sum = item.price * item.qty;
+        text += `${item.code} | ${item.name} | ${item.qty} шт. | ${sum} грн\n`;
+        total += sum;
+      });
+
+      text += `\nВсього: ${total} грн\n`;
+      if (note) text += `\nПримітка: ${note}`;
+
+      // Відправка через Formspree (заміни на свій)
+      const formData = new FormData();
+      formData.append('message', text);
+      formData.append('_subject', `Замовлення від ${clientName}`);
+
+      try {
+        await fetch('https://formspree.io/f/mlgqrbdw', {  // ← заміни цей код на свій
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+
+        alert('✅ Замовлення успішно відправлено на zaharov.and.nikol@gmail.com!');
+        cart = [];
+        updateCartCount();
+        hideOrderForm();
+        toggleCart();
+      } catch (err) {
+        alert('Помилка відправки. Спробуйте пізніше або надішліть дані вручну.');
+      }
+    }
+
+    window.onload = init;
   </script>
 </body>
 </html>
