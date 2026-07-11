@@ -11,16 +11,9 @@
     .sticky-search { 
       position: sticky; 
       top: 0; 
-      z-index: 40; 
+      z-index: 50; 
       background: white; 
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    #back-to-top {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      display: none;
-      z-index: 50;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
   </style>
 </head>
@@ -39,7 +32,7 @@
     </div>
   </header>
 
-  <!-- Закріплений пошук -->
+  <!-- Надійно закріплений пошук -->
   <div class="sticky-search border-b">
     <div class="max-w-7xl mx-auto px-4 py-4">
       <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару..." 
@@ -55,7 +48,7 @@
 
   <!-- Кнопка "Вгору" -->
   <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
-          class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg">
+          class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg hidden">
     <i class="fas fa-arrow-up text-xl"></i>
   </button>
 
@@ -294,7 +287,7 @@
       cart.forEach(item => {
         const sum = item.price * item.qty;
         total += sum;
-        message += `${item.code} | ${item.name}\n`;   // Код без **
+        message += `${item.code} | ${item.name}\n`;
         message += `Кількість: ${item.qty} шт. | Ціна: ${item.price} грн | Сума: ${sum} грн\n`;
         message += "----------------------------------------\n";
       });
@@ -317,7 +310,7 @@
         cart = [];
         updateCartCount();
         hideOrderForm();
-        toggleCart(); // закриваємо кошик
+        toggleCart();
       } catch (err) {
         alert('Помилка відправки. Спробуйте пізніше.');
       }
