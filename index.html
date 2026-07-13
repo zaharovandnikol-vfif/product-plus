@@ -15,6 +15,13 @@
       background: white; 
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
+    #back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      display: none;
+      z-index: 60;
+    }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -32,17 +39,11 @@
     </div>
   </header>
 
-  <!-- Закріплений пошук + кнопка оновлення -->
+  <!-- Закріплений пошук -->
   <div class="sticky-search border-b">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row gap-4">
+    <div class="max-w-7xl mx-auto px-4 py-4">
       <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару..." 
-             class="flex-1 px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
-      
-      <button onclick="updateData()" 
-              class="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center gap-2 whitespace-nowrap">
-        <i class="fas fa-sync-alt"></i>
-        <span>Оновити дані</span>
-      </button>
+             class="w-full px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
     </div>
   </div>
 
@@ -52,7 +53,13 @@
 
   <div id="status" class="text-center text-sm py-8 text-gray-500"></div>
 
-  <!-- Кошик і форма замовлення (залишаються без змін) -->
+  <!-- Кнопка "Вгору" -->
+  <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+          class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg">
+    <i class="fas fa-arrow-up text-xl"></i>
+  </button>
+
+  <!-- Кошик -->
   <div id="cart-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
     <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col m-4">
       <div class="p-6 border-b flex justify-between items-center">
@@ -72,6 +79,7 @@
     </div>
   </div>
 
+  <!-- Форма замовлення -->
   <div id="order-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
     <div class="bg-white rounded-3xl w-full max-w-lg p-8 m-4">
       <h2 class="text-2xl font-bold mb-6">Оформлення замовлення</h2>
@@ -92,7 +100,6 @@
     let products = [];
     let cart = [];
 
-    // Основне завантаження з Google Sheet
     async function loadData() {
       const status = document.getElementById('status');
       status.textContent = 'Завантаження каталогу...';
@@ -107,16 +114,8 @@
         status.textContent = `✅ Завантажено ${products.length} товарів`;
         renderProducts();
       } catch(e) {
-        status.textContent = '❌ Помилка завантаження. Спробуйте ще раз.';
+        status.textContent = '❌ Помилка завантаження. Оновіть сторінку (F5)';
       }
-    }
-
-    // Кнопка "Оновити дані"
-    async function updateData() {
-      const status = document.getElementById('status');
-      status.textContent = 'Оновлення даних...';
-      
-      await loadData();
     }
 
     function parseCSV(text) {
@@ -199,7 +198,6 @@
       renderProducts(filtered);
     }
 
-    // Інші функції (кошик, замовлення) — без змін
     function addToCart(id) {
       const product = products.find(p => p.id === id);
       if (!product) return;
@@ -326,6 +324,10 @@
         alert('Помилка відправки. Спробуйте пізніше.');
       }
     }
+
+    window.onscroll = function() {
+      document.getElementById('back-to-top').style.display = (window.scrollY > 400) ? "block" : "none";
+    };
 
     window.onload = function() {
       loadData();
