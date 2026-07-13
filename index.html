@@ -32,11 +32,17 @@
     </div>
   </header>
 
-  <!-- Закріплений пошук -->
+  <!-- Закріплений пошук + кнопка оновлення -->
   <div class="sticky-search border-b">
-    <div class="max-w-7xl mx-auto px-4 py-4">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row gap-4">
       <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару..." 
-             class="w-full px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
+             class="flex-1 px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
+      
+      <button onclick="updateData()" 
+              class="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center gap-2 whitespace-nowrap">
+        <i class="fas fa-sync-alt"></i>
+        <span>Оновити дані</span>
+      </button>
     </div>
   </div>
 
@@ -46,25 +52,106 @@
 
   <div id="status" class="text-center text-sm py-8 text-gray-500"></div>
 
+  <!-- Кошик і форма замовлення (залишаються без змін) -->
+  <div id="cart-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col m-4">
+      <div class="p-6 border-b flex justify-between items-center">
+        <h2 class="text-2xl font-bold">Ваш кошик</h2>
+        <button onclick="toggleCart()" class="text-3xl leading-none hover:text-gray-500">×</button>
+      </div>
+      <div id="cart-items" class="flex-1 overflow-auto p-6 space-y-4"></div>
+      <div class="p-6 border-t">
+        <div class="flex justify-between text-xl font-bold mb-6">
+          <span>Разом:</span>
+          <span id="cart-total">0 грн</span>
+        </div>
+        <button onclick="showOrderForm()" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl text-lg font-semibold">
+          Оформити замовлення
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="order-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-3xl w-full max-w-lg p-8 m-4">
+      <h2 class="text-2xl font-bold mb-6">Оформлення замовлення</h2>
+      <form id="order-form" onsubmit="submitOrder(event)">
+        <input type="text" id="client-name" placeholder="Назва клієнта (ФОП або магазин)" required
+               class="w-full px-5 py-4 border rounded-2xl mb-4 focus:outline-none focus:border-blue-500">
+        <textarea id="note" placeholder="Примітка до замовлення (необов'язково)" rows="4"
+                  class="w-full px-5 py-4 border rounded-2xl mb-6 focus:outline-none focus:border-blue-500"></textarea>
+        <div class="flex gap-4">
+          <button type="button" onclick="hideOrderForm()" class="flex-1 py-4 border border-gray-300 rounded-2xl font-medium">Скасувати</button>
+          <button type="submit" class="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-semibold">Відправити замовлення</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let products = [];
     let cart = [];
 
+    // Основне завантаження з Google Sheet
     async function loadData() {
       const status = document.getElementById('status');
-      status.textContent = 'Завантаження даних...';
+      status.textContent = 'Завантаження каталогу...';
 
       try {
-        const response = await fetch('products.json');
-        if (!response.ok) throw new Error('Файл не знайдено');
-        products = await response.json();
+        const csvUrl = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        
+        products = parseCSV(text);
 
         status.textContent = `✅ Завантажено ${products.length} товарів`;
         renderProducts();
       } catch(e) {
-        status.textContent = '❌ Не вдалося завантажити products.json';
-        console.error(e);
+        status.textContent = '❌ Помилка завантаження. Спробуйте ще раз.';
       }
+    }
+
+    // Кнопка "Оновити дані"
+    async function updateData() {
+      const status = document.getElementById('status');
+      status.textContent = 'Оновлення даних...';
+      
+      await loadData();
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const result = [];
+      let currentGroup = "";
+
+      for (let i = 1; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (!line) continue;
+
+        line = line.replace(/"([^"]*)"/g, m => m.replace(/,/g, '§'));
+        const cells = line.split(',').map(c => c.replace(/§/g, ',').replace(/^"|"$/g, '').trim());
+
+        if (cells[1] && cells[1].includes("ТМЦ /")) {
+          currentGroup = cells[1].replace("ТМЦ /", "").trim();
+          continue;
+        }
+
+        if (cells[2]) {
+          let priceStr = (cells[4] || cells[3] || "").replace(/[^0-9.,]/g, '').replace(',', '.');
+          const price = parseFloat(priceStr) || 0;
+
+          if (price > 0) {
+            result.push({
+              id: cells[1] || String(i),
+              code: cells[1] || '',
+              name: cells[2],
+              price: price,
+              group: currentGroup
+            });
+          }
+        }
+      }
+      return result;
     }
 
     function renderProducts(filtered = products) {
@@ -112,6 +199,7 @@
       renderProducts(filtered);
     }
 
+    // Інші функції (кошик, замовлення) — без змін
     function addToCart(id) {
       const product = products.find(p => p.id === id);
       if (!product) return;
