@@ -190,6 +190,7 @@
       container.innerHTML = '';
 
       filtered.forEach(p => {
+        // Пряме посилання на Google Drive
         const photoUrl = `https://drive.google.com/uc?export=view&id=${p.code}`;
 
         const item = document.createElement('div');
