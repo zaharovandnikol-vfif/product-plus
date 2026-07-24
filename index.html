@@ -15,6 +15,13 @@
       background: white; 
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
+    #back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      display: none;
+      z-index: 60;
+    }
     .product-img {
       width: 80px;
       height: 80px;
@@ -22,6 +29,7 @@
       border-radius: 8px;
       cursor: pointer;
       transition: transform 0.2s;
+      border: 1px solid #e5e7eb;
     }
     .product-img:hover {
       transform: scale(1.08);
@@ -76,6 +84,12 @@
   <div id="image-modal" onclick="this.style.display='none'">
     <img id="modal-image" src="" alt="Фото товару" onclick="event.stopImmediatePropagation()">
   </div>
+
+  <!-- Кнопка "Вгору" -->
+  <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+          class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg hidden">
+    <i class="fas fa-arrow-up text-xl"></i>
+  </button>
 
   <!-- Кошик -->
   <div id="cart-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -176,7 +190,7 @@
       container.innerHTML = '';
 
       filtered.forEach(p => {
-        const photoUrl = `https://drive.google.com/uc?export=view&id=${p.code}`; // назва файлу = код
+        const photoUrl = `https://drive.google.com/uc?export=view&id=${p.code}`;
 
         const item = document.createElement('div');
         item.className = "bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 transition";
@@ -184,6 +198,7 @@
           <div class="flex flex-col md:flex-row md:items-center gap-4">
             <div>
               <img src="${photoUrl}" alt="${p.name}" class="product-img" 
+                   onerror="this.style.display='none'" 
                    onclick="showImage('${photoUrl}')">
             </div>
             <div class="flex-1">
