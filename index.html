@@ -190,9 +190,8 @@
       container.innerHTML = '';
 
       filtered.forEach(p => {
-        // === ТУТ ЗАМІНИ НА СВОЇ ДАНІ ===
-        const photoUrl = `https://github.com/zaharovandnikol-vfif/product-plus/tree/fafc3542800b457b66f5b74204e692b0a51e2c23/photos`;
-        // ==============================
+        // Автоматично підставляє фото за кодом товару
+        const photoUrl = `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${p.code}.jpg`;
 
         const item = document.createElement('div');
         item.className = "bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 transition";
