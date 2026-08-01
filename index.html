@@ -141,6 +141,9 @@
     let products = [];
     let cart = [];
 
+    // Список розширень, які сайт буде пробувати
+    const photoExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+
     async function loadData() {
       const status = document.getElementById('status');
       status.textContent = 'Завантаження каталогу...';
@@ -194,22 +197,49 @@
       return result;
     }
 
+    function getPhotoUrl(code, extensionIndex = 0) {
+      return `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${photoExtensions[extensionIndex]}`;
+    }
+
     function renderProducts(filtered = products) {
       const container = document.getElementById('products');
       container.innerHTML = '';
 
       filtered.forEach(p => {
-        const photoUrl = `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${p.code}.png`;
-
         const item = document.createElement('div');
         item.className = "bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 transition";
+        
+        // Створюємо img і налаштовуємо перебір розширень
+        const img = document.createElement('img');
+        img.alt = p.name;
+        img.className = 'product-img';
+        img.style.display = 'none'; // спочатку ховаємо, покажемо тільки якщо завантажиться
+        
+        let currentExt = 0;
+        img.src = getPhotoUrl(p.code, currentExt);
+        
+        img.onload = function() {
+          this.style.display = 'block';
+        };
+        
+        img.onerror = function() {
+          currentExt++;
+          if (currentExt < photoExtensions.length) {
+            this.src = getPhotoUrl(p.code, currentExt);
+          } else {
+            this.style.display = 'none';
+          }
+        };
+        
+        img.onclick = function() {
+          if (this.style.display !== 'none') {
+            showImage(this.src);
+          }
+        };
+
         item.innerHTML = `
           <div class="flex flex-col md:flex-row md:items-center gap-4">
-            <div>
-              <img src="${photoUrl}" alt="${p.name}" class="product-img" 
-                   onerror="this.style.display='none'" 
-                   onclick="showImage('${photoUrl}')">
-            </div>
+            <div class="photo-container"></div>
             <div class="flex-1">
               <div class="flex items-center gap-2 text-sm text-gray-500">
                 <span class="font-medium">Код:</span> 
@@ -232,6 +262,9 @@
             </div>
           </div>
         `;
+        
+        // Вставляємо img в контейнер
+        item.querySelector('.photo-container').appendChild(img);
         container.appendChild(item);
       });
     }
