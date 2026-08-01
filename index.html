@@ -116,6 +116,9 @@
         <button onclick="showOrderForm()" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl text-lg font-semibold">
           Оформити замовлення
         </button>
+        <p class="text-red-600 text-sm mt-3 text-center leading-snug">
+          Увага! Кількість замовляємого вами товару на момент формування замовлення оператором може змінитися.
+        </p>
       </div>
     </div>
   </div>
@@ -141,8 +144,8 @@
     let products = [];
     let cart = [];
 
-    // Список розширень, які сайт буде пробувати
-    const photoExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+    // Тільки два формати: спочатку webp, потім png
+    const photoExtensions = ['webp', 'png'];
 
     async function loadData() {
       const status = document.getElementById('status');
@@ -209,11 +212,10 @@
         const item = document.createElement('div');
         item.className = "bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 transition";
         
-        // Створюємо img і налаштовуємо перебір розширень
         const img = document.createElement('img');
         img.alt = p.name;
         img.className = 'product-img';
-        img.style.display = 'none'; // спочатку ховаємо, покажемо тільки якщо завантажиться
+        img.style.display = 'none';
         
         let currentExt = 0;
         img.src = getPhotoUrl(p.code, currentExt);
@@ -263,7 +265,6 @@
           </div>
         `;
         
-        // Вставляємо img в контейнер
         item.querySelector('.photo-container').appendChild(img);
         container.appendChild(item);
       });
