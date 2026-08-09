@@ -19,7 +19,6 @@
       padding: 0 16px;
     }
 
-    /* Header */
     header {
       background: #1d4ed8;
       color: white;
@@ -80,7 +79,6 @@
     }
     .contacts strong { color: white; }
 
-    /* Search */
     .sticky-search {
       position: sticky;
       top: 0;
@@ -100,7 +98,6 @@
     }
     #search:focus { border-color: #3b82f6; }
 
-    /* Products */
     #products {
       padding: 24px 0;
       display: flex;
@@ -119,6 +116,11 @@
       transition: border-color 0.2s;
     }
     .product-card:hover { border-color: #93c5fd; }
+    .photo-slot {
+      width: 80px;
+      height: 80px;
+      flex-shrink: 0;
+    }
     .product-img {
       width: 80px;
       height: 80px;
@@ -127,6 +129,7 @@
       border: 1px solid #e5e7eb;
       cursor: pointer;
       transition: transform 0.2s;
+      background: #f3f4f6;
     }
     .product-img:hover { transform: scale(1.06); }
     .product-info { flex: 1; min-width: 180px; }
@@ -173,7 +176,6 @@
     }
     .add-btn:hover { background: #1d4ed8; }
 
-    /* Load more */
     .load-more-wrap {
       text-align: center;
       padding: 16px 0 32px;
@@ -189,10 +191,6 @@
       cursor: pointer;
     }
     #load-more:hover { background: #1e40af; }
-    #load-more:disabled {
-      background: #9ca3af;
-      cursor: default;
-    }
 
     #status {
       text-align: center;
@@ -201,7 +199,6 @@
       font-size: 0.9rem;
     }
 
-    /* Back to top */
     #back-to-top {
       position: fixed;
       bottom: 28px;
@@ -220,7 +217,6 @@
     }
     #back-to-top:hover { background: #1d4ed8; }
 
-    /* Modal common */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -327,7 +323,6 @@
       line-height: 1.4;
     }
 
-    /* Order form */
     #order-modal .modal { max-width: 480px; }
     .form-input, .form-textarea {
       width: 100%;
@@ -340,10 +335,7 @@
       font-family: inherit;
     }
     .form-input:focus, .form-textarea:focus { border-color: #3b82f6; }
-    .form-actions {
-      display: flex;
-      gap: 12px;
-    }
+    .form-actions { display: flex; gap: 12px; }
     .btn-cancel {
       flex: 1;
       padding: 14px;
@@ -366,7 +358,6 @@
     }
     .btn-submit:hover { background: #15803d; }
 
-    /* Image modal */
     #image-modal {
       display: none;
       position: fixed;
@@ -430,12 +421,10 @@
     <i class="fas fa-arrow-up"></i>
   </button>
 
-  <!-- Модальне вікно фото -->
   <div id="image-modal" onclick="this.classList.remove('show')">
     <img id="modal-image" src="" alt="Фото товару" onclick="event.stopPropagation()">
   </div>
 
-  <!-- Кошик -->
   <div id="cart-modal" class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
@@ -456,7 +445,6 @@
     </div>
   </div>
 
-  <!-- Форма замовлення -->
   <div id="order-modal" class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
@@ -483,14 +471,13 @@
     let displayedCount = 0;
     const PAGE_SIZE = 80;
     const CACHE_KEY = 'product_plus_cache';
-    const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 годин
+    const CACHE_TTL = 6 * 60 * 60 * 1000;
     const photoExtensions = ['webp', 'png'];
 
     async function loadData() {
       const status = document.getElementById('status');
       status.textContent = 'Завантаження каталогу...';
 
-      // Перевіряємо кеш
       try {
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
@@ -499,9 +486,7 @@
             products = data;
             filteredProducts = products;
             status.textContent = `✅ Завантажено ${products.length} товарів (з кешу)`;
-            displayedCount = 0;
-            document.getElementById('products').innerHTML = '';
-            loadMore();
+            resetAndRender();
             return;
           }
         }
@@ -514,7 +499,6 @@
         products = parseCSV(text);
         filteredProducts = products;
 
-        // Зберігаємо в кеш
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({
             data: products,
@@ -523,9 +507,7 @@
         } catch (e) {}
 
         status.textContent = `✅ Завантажено ${products.length} товарів`;
-        displayedCount = 0;
-        document.getElementById('products').innerHTML = '';
-        loadMore();
+        resetAndRender();
       } catch (e) {
         status.textContent = '❌ Помилка завантаження. Оновіть сторінку (F5)';
       }
@@ -565,7 +547,7 @@
       return result;
     }
 
-    function getPhotoUrl(code, index = 0) {
+    function getPhotoUrl(code, index) {
       return `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${photoExtensions[index]}`;
     }
 
@@ -577,21 +559,27 @@
       img.alt = p.name;
       img.className = 'product-img';
       img.loading = 'lazy';
-      img.style.display = 'none';
+      img.decoding = 'async';
 
-      let extIndex = 0;
-      img.src = getPhotoUrl(p.code, extIndex);
-      img.onload = function() { this.style.display = 'block'; };
+      // Зберігаємо індекс розширення прямо на елементі
+      img.dataset.ext = '0';
+      img.src = getPhotoUrl(p.code, 0);
+
       img.onerror = function() {
-        extIndex++;
-        if (extIndex < photoExtensions.length) {
-          this.src = getPhotoUrl(p.code, extIndex);
+        let next = parseInt(this.dataset.ext || '0', 10) + 1;
+        if (next < photoExtensions.length) {
+          this.dataset.ext = String(next);
+          this.src = getPhotoUrl(p.code, next);
         } else {
-          this.style.display = 'none';
+          // Немає фото — ховаємо картинку, залишаємо місце
+          this.style.visibility = 'hidden';
         }
       };
+
       img.onclick = function() {
-        if (this.style.display !== 'none') showImage(this.src);
+        if (this.style.visibility !== 'hidden') {
+          showImage(this.src);
+        }
       };
 
       card.innerHTML = `
@@ -615,10 +603,20 @@
       return card;
     }
 
+    function resetAndRender() {
+      displayedCount = 0;
+      document.getElementById('products').innerHTML = '';
+      loadMore();
+    }
+
     function loadMore() {
       const container = document.getElementById('products');
       const next = filteredProducts.slice(displayedCount, displayedCount + PAGE_SIZE);
-      next.forEach(p => container.appendChild(createProductCard(p)));
+
+      next.forEach(p => {
+        container.appendChild(createProductCard(p));
+      });
+
       displayedCount += next.length;
 
       const btn = document.getElementById('load-more');
@@ -637,9 +635,7 @@
         p.name.toLowerCase().includes(search) ||
         p.code.toLowerCase().includes(search)
       );
-      displayedCount = 0;
-      document.getElementById('products').innerHTML = '';
-      loadMore();
+      resetAndRender();
     }
 
     function showImage(src) {
@@ -774,171 +770,5 @@
       document.getElementById('search').addEventListener('input', filterProducts);
     };
   </script>
-</body>
-</html><!DOCTYPE html>
-
-<html lang="uk">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Продукт Плюс</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-body { font-family: system-ui; }
-.product-img { width:80px;height:80px;object-fit:cover;border-radius:8px; }
-</style>
-
-</head>
-
-<body class="bg-gray-50">
-
-<header class="bg-blue-700 text-white sticky top-0 z-50 p-4 flex justify-between">
-<h1 class="text-xl font-bold">Продукт Плюс</h1>
-<div>🛒 <span id="cart-count">0</span></div>
-</header>
-
-<div class="p-4 sticky top-[60px] bg-white z-40">
-<input id="search" placeholder="Пошук..." class="w-full p-3 border rounded-xl">
-</div>
-
-<div id="products" class="p-4 space-y-3"></div>
-
-<script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
-
-let products = [];
-let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-const photoExt = ['webp','png'];
-
-// ---------------- LOAD ----------------
-async function loadData() {
-  const cache = localStorage.getItem("products");
-
-  if (cache) {
-    products = JSON.parse(cache);
-    render(products);
-    return;
-  }
-
-  const res = await fetch(CSV_URL);
-  const text = await res.text();
-  products = parseCSV(text);
-
-  localStorage.setItem("products", JSON.stringify(products));
-  render(products);
-}
-
-// ---------------- CSV ----------------
-function parseCSV(text) {
-  const lines = text.split('\n');
-  const result = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',');
-
-    if (!cols[2]) continue;
-
-    const price = parseFloat(cols[4]) || 0;
-    if (price <= 0) continue;
-
-    result.push({
-      id: cols[1] || i,
-      code: cols[1],
-      name: cols[2],
-      price
-    });
-  }
-
-  return result;
-}
-
-// ---------------- IMAGE ----------------
-function getImg(code, i=0) {
-  return `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${photoExt[i]}`;
-}
-
-// ---------------- RENDER ----------------
-function render(list) {
-  const container = document.getElementById("products");
-  container.innerHTML = "";
-
-  const frag = document.createDocumentFragment();
-
-  list.slice(0,200).forEach(p => {
-    const div = document.createElement("div");
-    div.className = "bg-white p-4 rounded-xl flex gap-3 items-center";
-
-    const img = document.createElement("img");
-    img.className = "product-img";
-    img.loading = "lazy";
-    img.src = getImg(p.code);
-
-    img.onerror = () => {
-      if (img.src.includes("webp")) img.src = getImg(p.code,1);
-      else img.style.display="none";
-    };
-
-    div.innerHTML = `
-      <div class="flex-1">
-        <div class="text-sm text-gray-500">${p.code}</div>
-        <div>${p.name}</div>
-      </div>
-      <div class="text-blue-700 font-bold">${p.price} грн</div>
-      <button class="bg-blue-600 text-white px-3 py-2 rounded">+</button>
-    `;
-
-    div.querySelector("button").onclick = () => addToCart(p);
-
-    div.prepend(img);
-    frag.appendChild(div);
-  });
-
-  container.appendChild(frag);
-}
-
-// ---------------- SEARCH (debounce) ----------------
-let timer;
-document.getElementById("search").addEventListener("input", e => {
-  clearTimeout(timer);
-  timer = setTimeout(() => {
-    const val = e.target.value.toLowerCase();
-
-    const filtered = products.filter(p =>
-      p.name.toLowerCase().includes(val) ||
-      p.code.toLowerCase().includes(val)
-    );
-
-    render(filtered);
-  }, 300);
-});
-
-// ---------------- CART ----------------
-function addToCart(p) {
-  const found = cart.find(i => i.id === p.id);
-  if (found) found.qty++;
-  else cart.push({...p, qty:1});
-
-  saveCart();
-}
-
-function saveCart() {
-  localStorage.setItem("cart", JSON.stringify(cart));
-  updateCart();
-}
-
-function updateCart() {
-  const count = cart.reduce((s,i)=>s+i.qty,0);
-  document.getElementById("cart-count").textContent = count;
-}
-
-// ---------------- INIT ----------------
-updateCart();
-loadData();
-
-</script>
-
 </body>
 </html>
