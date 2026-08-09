@@ -19,19 +19,23 @@
       padding: 0 16px;
     }
 
-    header {
-      background: #1d4ed8;
-      color: white;
+    /* Шапка + пошук разом закріплені */
+    .sticky-top {
       position: sticky;
       top: 0;
       z-index: 50;
+    }
+
+    header {
+      background: #1d4ed8;
+      color: white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .header-inner {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 0;
+      padding: 16px 0 8px;
     }
     .logo {
       font-size: 1.75rem;
@@ -79,15 +83,12 @@
     }
     .contacts strong { color: white; }
 
-    .sticky-search {
-      position: sticky;
-      top: 0;
-      z-index: 40;
+    .search-bar {
       background: white;
       border-bottom: 1px solid #e5e7eb;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-    .search-wrap { padding: 16px 0; }
+    .search-wrap { padding: 12px 0; }
     #search {
       width: 100%;
       padding: 14px 18px;
@@ -378,34 +379,38 @@
       .logo { font-size: 1.35rem; }
       .product-card { padding: 14px; }
       .price-value { font-size: 1.2rem; }
+      .contacts { font-size: 0.8rem; }
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="container">
-      <div class="header-inner">
-        <div class="logo">
-          <i class="fas fa-store"></i> Продукт Плюс
+  <!-- Шапка + пошук (разом закріплені) -->
+  <div class="sticky-top">
+    <header>
+      <div class="container">
+        <div class="header-inner">
+          <div class="logo">
+            <i class="fas fa-store"></i> Продукт Плюс
+          </div>
+          <button class="cart-btn" onclick="toggleCart()">
+            <i class="fas fa-shopping-cart"></i>
+            <span id="cart-count">0</span>
+          </button>
         </div>
-        <button class="cart-btn" onclick="toggleCart()">
-          <i class="fas fa-shopping-cart"></i>
-          <span id="cart-count">0</span>
-        </button>
+        <div class="contacts">
+          <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
+          <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
+          <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
+          <span><i class="fas fa-location-dot"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
+        </div>
       </div>
-      <div class="contacts">
-        <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
-        <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
-        <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
-        <span><i class="fas fa-location"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
-      </div>
-    </div>
-  </header>
+    </header>
 
-  <div class="sticky-search">
-    <div class="container search-wrap">
-      <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару...">
+    <div class="search-bar">
+      <div class="container search-wrap">
+        <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару...">
+      </div>
     </div>
   </div>
 
@@ -560,8 +565,6 @@
       img.className = 'product-img';
       img.loading = 'lazy';
       img.decoding = 'async';
-
-      // Зберігаємо індекс розширення прямо на елементі
       img.dataset.ext = '0';
       img.src = getPhotoUrl(p.code, 0);
 
@@ -571,7 +574,6 @@
           this.dataset.ext = String(next);
           this.src = getPhotoUrl(p.code, next);
         } else {
-          // Немає фото — ховаємо картинку, залишаємо місце
           this.style.visibility = 'hidden';
         }
       };
