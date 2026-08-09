@@ -1,426 +1,167 @@
 <!DOCTYPE html>
+
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Продукт Плюс — Оптовий магазин</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; }
-    .sticky-search { 
-      position: sticky; 
-      top: 0; 
-      z-index: 50; 
-      background: white; 
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    #back-to-top {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      display: none;
-      z-index: 60;
-    }
-    .product-img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: transform 0.2s;
-      border: 1px solid #e5e7eb;
-    }
-    .product-img:hover {
-      transform: scale(1.08);
-    }
-    #image-modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.9);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    #modal-image {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 12px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Продукт Плюс</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body { font-family: system-ui; }
+.product-img { width:80px;height:80px;object-fit:cover;border-radius:8px; }
+</style>
+
 </head>
+
 <body class="bg-gray-50">
 
-  <!-- Header -->
-  <header class="bg-blue-700 text-white sticky top-0 z-50 shadow">
-    <div class="max-w-7xl mx-auto px-4 py-4">
-      <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold flex items-center gap-3">
-          <i class="fas fa-store"></i> Продукт Плюс
-        </h1>
-        <button onclick="toggleCart()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl transition relative">
-          <i class="fas fa-shopping-cart"></i>
-          <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
-        </button>
-      </div>
-      
-      <!-- Контактні дані -->
-      <div class="mt-3 text-sm flex flex-wrap gap-x-6 gap-y-1 text-blue-100">
-        <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
-        <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
-        <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
-        <span><i class="fas fa-location"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
-      </div>
-    </div>
-  </header>
+<header class="bg-blue-700 text-white sticky top-0 z-50 p-4 flex justify-between">
+<h1 class="text-xl font-bold">Продукт Плюс</h1>
+<div>🛒 <span id="cart-count">0</span></div>
+</header>
 
-  <!-- Закріплений пошук -->
-  <div class="sticky-search border-b">
-    <div class="max-w-7xl mx-auto px-4 py-4">
-      <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару..." 
-             class="w-full px-5 py-4 rounded-2xl border border-gray-300 focus:outline-none focus:border-blue-500 text-lg">
-    </div>
-  </div>
+<div class="p-4 sticky top-[60px] bg-white z-40">
+<input id="search" placeholder="Пошук..." class="w-full p-3 border rounded-xl">
+</div>
 
-  <div class="max-w-7xl mx-auto px-4 py-8">
-    <div id="products" class="space-y-3"></div>
-  </div>
+<div id="products" class="p-4 space-y-3"></div>
 
-  <div id="status" class="text-center text-sm py-8 text-gray-500"></div>
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
 
-  <!-- Модальне вікно для фото -->
-  <div id="image-modal" onclick="this.style.display='none'">
-    <img id="modal-image" src="" alt="Фото товару" onclick="event.stopImmediatePropagation()">
-  </div>
+let products = [];
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-  <!-- Кнопка "Вгору" -->
-  <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
-          class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg hidden">
-    <i class="fas fa-arrow-up text-xl"></i>
-  </button>
+const photoExt = ['webp','png'];
 
-  <!-- Кошик -->
-  <div id="cart-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-    <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col m-4">
-      <div class="p-6 border-b flex justify-between items-center">
-        <h2 class="text-2xl font-bold">Ваш кошик</h2>
-        <button onclick="toggleCart()" class="text-3xl leading-none hover:text-gray-500">×</button>
-      </div>
-      <div id="cart-items" class="flex-1 overflow-auto p-6 space-y-4"></div>
-      <div class="p-6 border-t">
-        <div class="flex justify-between text-xl font-bold mb-6">
-          <span>Разом:</span>
-          <span id="cart-total">0 грн</span>
-        </div>
-        <button onclick="showOrderForm()" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl text-lg font-semibold">
-          Оформити замовлення
-        </button>
-        <p class="text-red-600 text-sm mt-3 text-center leading-snug">
-          Увага! Кількість замовляємого вами товару на момент формування замовлення оператором може змінитися.
-        </p>
-      </div>
-    </div>
-  </div>
+// ---------------- LOAD ----------------
+async function loadData() {
+  const cache = localStorage.getItem("products");
 
-  <!-- Форма замовлення -->
-  <div id="order-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
-    <div class="bg-white rounded-3xl w-full max-w-lg p-8 m-4">
-      <h2 class="text-2xl font-bold mb-6">Оформлення замовлення</h2>
-      <form id="order-form" onsubmit="submitOrder(event)">
-        <input type="text" id="client-name" placeholder="Назва клієнта (ФОП або магазин)" required
-               class="w-full px-5 py-4 border rounded-2xl mb-4 focus:outline-none focus:border-blue-500">
-        <textarea id="note" placeholder="Примітка до замовлення (необов'язково)" rows="4"
-                  class="w-full px-5 py-4 border rounded-2xl mb-6 focus:outline-none focus:border-blue-500"></textarea>
-        <div class="flex gap-4">
-          <button type="button" onclick="hideOrderForm()" class="flex-1 py-4 border border-gray-300 rounded-2xl font-medium">Скасувати</button>
-          <button type="submit" class="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-semibold">Відправити замовлення</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  if (cache) {
+    products = JSON.parse(cache);
+    render(products);
+    return;
+  }
 
-  <script>
-    let products = [];
-    let cart = [];
+  const res = await fetch(CSV_URL);
+  const text = await res.text();
+  products = parseCSV(text);
 
-    // Тільки два формати: спочатку webp, потім png
-    const photoExtensions = ['webp', 'png'];
+  localStorage.setItem("products", JSON.stringify(products));
+  render(products);
+}
 
-    async function loadData() {
-      const status = document.getElementById('status');
-      status.textContent = 'Завантаження каталогу...';
+// ---------------- CSV ----------------
+function parseCSV(text) {
+  const lines = text.split('\n');
+  const result = [];
 
-      try {
-        const csvUrl = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
-        const response = await fetch(csvUrl);
-        const text = await response.text();
-        
-        products = parseCSV(text);
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
 
-        status.textContent = `✅ Завантажено ${products.length} товарів`;
-        renderProducts();
-      } catch(e) {
-        status.textContent = '❌ Помилка завантаження. Оновіть сторінку (F5)';
-      }
-    }
+    if (!cols[2]) continue;
 
-    function parseCSV(text) {
-      const lines = text.trim().split('\n');
-      const result = [];
-      let currentGroup = "";
+    const price = parseFloat(cols[4]) || 0;
+    if (price <= 0) continue;
 
-      for (let i = 1; i < lines.length; i++) {
-        let line = lines[i].trim();
-        if (!line) continue;
+    result.push({
+      id: cols[1] || i,
+      code: cols[1],
+      name: cols[2],
+      price
+    });
+  }
 
-        line = line.replace(/"([^"]*)"/g, m => m.replace(/,/g, '§'));
-        const cells = line.split(',').map(c => c.replace(/§/g, ',').replace(/^"|"$/g, '').trim());
+  return result;
+}
 
-        if (cells[1] && cells[1].includes("ТМЦ /")) {
-          currentGroup = cells[1].replace("ТМЦ /", "").trim();
-          continue;
-        }
+// ---------------- IMAGE ----------------
+function getImg(code, i=0) {
+  return `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${photoExt[i]}`;
+}
 
-        if (cells[2]) {
-          let priceStr = (cells[4] || cells[3] || "").replace(/[^0-9.,]/g, '').replace(',', '.');
-          const price = parseFloat(priceStr) || 0;
+// ---------------- RENDER ----------------
+function render(list) {
+  const container = document.getElementById("products");
+  container.innerHTML = "";
 
-          if (price > 0) {
-            result.push({
-              id: cells[1] || String(i),
-              code: cells[1] || '',
-              name: cells[2],
-              price: price,
-              group: currentGroup
-            });
-          }
-        }
-      }
-      return result;
-    }
+  const frag = document.createDocumentFragment();
 
-    function getPhotoUrl(code, extensionIndex = 0) {
-      return `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${photoExtensions[extensionIndex]}`;
-    }
+  list.slice(0,200).forEach(p => {
+    const div = document.createElement("div");
+    div.className = "bg-white p-4 rounded-xl flex gap-3 items-center";
 
-    function renderProducts(filtered = products) {
-      const container = document.getElementById('products');
-      container.innerHTML = '';
+    const img = document.createElement("img");
+    img.className = "product-img";
+    img.loading = "lazy";
+    img.src = getImg(p.code);
 
-      filtered.forEach(p => {
-        const item = document.createElement('div');
-        item.className = "bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-300 transition";
-        
-        const img = document.createElement('img');
-        img.alt = p.name;
-        img.className = 'product-img';
-        img.style.display = 'none';
-        
-        let currentExt = 0;
-        img.src = getPhotoUrl(p.code, currentExt);
-        
-        img.onload = function() {
-          this.style.display = 'block';
-        };
-        
-        img.onerror = function() {
-          currentExt++;
-          if (currentExt < photoExtensions.length) {
-            this.src = getPhotoUrl(p.code, currentExt);
-          } else {
-            this.style.display = 'none';
-          }
-        };
-        
-        img.onclick = function() {
-          if (this.style.display !== 'none') {
-            showImage(this.src);
-          }
-        };
-
-        item.innerHTML = `
-          <div class="flex flex-col md:flex-row md:items-center gap-4">
-            <div class="photo-container"></div>
-            <div class="flex-1">
-              <div class="flex items-center gap-2 text-sm text-gray-500">
-                <span class="font-medium">Код:</span> 
-                <span class="font-mono">${p.code}</span>
-              </div>
-              <div class="font-medium mt-1 text-lg leading-tight">${p.name}</div>
-            </div>
-            <div class="flex items-center gap-4">
-              <div class="text-right">
-                <div class="text-sm text-gray-500">Ціна:</div>
-                <div class="text-2xl font-bold text-blue-700">${p.price} грн</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <input type="number" id="qty-${p.id}" value="1" min="1" 
-                       class="w-20 text-center border rounded-xl py-2 focus:outline-none focus:border-blue-500">
-              </div>
-              <button onclick="addToCart('${p.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl transition">
-                <i class="fas fa-cart-plus"></i>
-              </button>
-            </div>
-          </div>
-        `;
-        
-        item.querySelector('.photo-container').appendChild(img);
-        container.appendChild(item);
-      });
-    }
-
-    function showImage(src) {
-      document.getElementById('modal-image').src = src;
-      document.getElementById('image-modal').style.display = 'flex';
-    }
-
-    function filterProducts() {
-      const search = document.getElementById('search').value.toLowerCase().trim();
-      const filtered = products.filter(p => {
-        return !search || 
-               p.name.toLowerCase().includes(search) || 
-               p.code.toLowerCase().includes(search);
-      });
-      renderProducts(filtered);
-    }
-
-    function addToCart(id) {
-      const product = products.find(p => p.id === id);
-      if (!product) return;
-
-      const qtyInput = document.getElementById(`qty-${id}`);
-      const qty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
-
-      const existing = cart.find(item => item.id === id);
-      if (existing) existing.qty += qty;
-      else cart.push({...product, qty: qty});
-
-      updateCartCount();
-      alert(`✅ ${product.name} (${qty} шт.) додано в кошик`);
-    }
-
-    function updateCartCount() {
-      const count = cart.reduce((sum, item) => sum + item.qty, 0);
-      document.getElementById('cart-count').textContent = count;
-    }
-
-    function toggleCart() {
-      document.getElementById('cart-modal').classList.toggle('hidden');
-      renderCart();
-    }
-
-    function renderCart() {
-      const container = document.getElementById('cart-items');
-      container.innerHTML = '';
-      let total = 0;
-
-      if (cart.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500 py-12">Кошик порожній</p>`;
-        document.getElementById('cart-total').textContent = '0 грн';
-        return;
-      }
-
-      cart.forEach((item, index) => {
-        const sum = item.price * item.qty;
-        total += sum;
-        const div = document.createElement('div');
-        div.className = "flex gap-4 bg-gray-50 p-4 rounded-2xl";
-        div.innerHTML = `
-          <div class="flex-1">
-            <div class="font-medium">${item.name}</div>
-            <div class="text-sm text-gray-500">${item.code} — ${item.price} грн</div>
-          </div>
-          <div class="flex items-center gap-3">
-            <input type="number" value="${item.qty}" min="1" class="w-20 text-center border rounded-xl py-2" onchange="changeQty(${index}, this.value)">
-            <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700">✕</button>
-          </div>
-          <div class="w-24 text-right font-semibold">${sum} грн</div>
-        `;
-        container.appendChild(div);
-      });
-
-      document.getElementById('cart-total').textContent = total + ' грн';
-    }
-
-    function changeQty(index, newQty) {
-      cart[index].qty = parseInt(newQty) || 1;
-      renderCart();
-      updateCartCount();
-    }
-
-    function removeFromCart(index) {
-      cart.splice(index, 1);
-      renderCart();
-      updateCartCount();
-    }
-
-    function showOrderForm() {
-      if (cart.length === 0) return alert("Кошик порожній!");
-      document.getElementById('cart-modal').classList.add('hidden');
-      document.getElementById('order-modal').classList.remove('hidden');
-    }
-
-    function hideOrderForm() {
-      document.getElementById('order-modal').classList.add('hidden');
-    }
-
-    async function submitOrder(e) {
-      e.preventDefault();
-      
-      const clientName = document.getElementById('client-name').value.trim();
-      if (!clientName) return alert("Введіть назву клієнта!");
-
-      const note = document.getElementById('note').value.trim();
-
-      let message = `Нове замовлення\n\n`;
-      message += `Клієнт: ${clientName}\n`;
-      message += `Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
-      message += "Товари:\n";
-      message += "----------------------------------------\n";
-
-      let total = 0;
-      cart.forEach(item => {
-        const sum = item.price * item.qty;
-        total += sum;
-        message += `${item.code} | ${item.name}\n`;
-        message += `Кількість: ${item.qty} шт. | Ціна: ${item.price} грн | Сума: ${sum} грн\n`;
-        message += "----------------------------------------\n";
-      });
-
-      message += `\nВсього до сплати: ${total} грн\n`;
-      if (note) message += `\nПримітка: ${note}`;
-
-      const formData = new FormData();
-      formData.append('message', message);
-      formData.append('_subject', `Замовлення від ${clientName}`);
-
-      try {
-        await fetch('https://formspree.io/f/mlgqrbdw', {
-          method: 'POST',
-          body: formData,
-          headers: { 'Accept': 'application/json' }
-        });
-
-        alert('✅ Замовлення успішно відправлено!');
-        cart = [];
-        updateCartCount();
-        hideOrderForm();
-        toggleCart();
-      } catch (err) {
-        alert('Помилка відправки. Спробуйте пізніше.');
-      }
-    }
-
-    window.onscroll = function() {
-      document.getElementById('back-to-top').style.display = (window.scrollY > 400) ? "block" : "none";
+    img.onerror = () => {
+      if (img.src.includes("webp")) img.src = getImg(p.code,1);
+      else img.style.display="none";
     };
 
-    window.onload = function() {
-      loadData();
-      document.getElementById('search').addEventListener('input', filterProducts);
-    };
-  </script>
+    div.innerHTML = `
+      <div class="flex-1">
+        <div class="text-sm text-gray-500">${p.code}</div>
+        <div>${p.name}</div>
+      </div>
+      <div class="text-blue-700 font-bold">${p.price} грн</div>
+      <button class="bg-blue-600 text-white px-3 py-2 rounded">+</button>
+    `;
+
+    div.querySelector("button").onclick = () => addToCart(p);
+
+    div.prepend(img);
+    frag.appendChild(div);
+  });
+
+  container.appendChild(frag);
+}
+
+// ---------------- SEARCH (debounce) ----------------
+let timer;
+document.getElementById("search").addEventListener("input", e => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    const val = e.target.value.toLowerCase();
+
+    const filtered = products.filter(p =>
+      p.name.toLowerCase().includes(val) ||
+      p.code.toLowerCase().includes(val)
+    );
+
+    render(filtered);
+  }, 300);
+});
+
+// ---------------- CART ----------------
+function addToCart(p) {
+  const found = cart.find(i => i.id === p.id);
+  if (found) found.qty++;
+  else cart.push({...p, qty:1});
+
+  saveCart();
+}
+
+function saveCart() {
+  localStorage.setItem("cart", JSON.stringify(cart));
+  updateCart();
+}
+
+function updateCart() {
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  document.getElementById("cart-count").textContent = count;
+}
+
+// ---------------- INIT ----------------
+updateCart();
+loadData();
+
+</script>
+
 </body>
 </html>
