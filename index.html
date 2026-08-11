@@ -19,7 +19,6 @@
       padding: 0 16px;
     }
 
-    /* Шапка + пошук разом закріплені */
     .sticky-top {
       position: sticky;
       top: 0;
@@ -43,7 +42,10 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      cursor: pointer;
+      user-select: none;
     }
+    .logo:hover { opacity: 0.9; }
     .cart-btn {
       position: relative;
       background: #2563eb;
@@ -385,12 +387,11 @@
 </head>
 <body>
 
-  <!-- Шапка + пошук (разом закріплені) -->
   <div class="sticky-top">
     <header>
       <div class="container">
         <div class="header-inner">
-          <div class="logo">
+          <div class="logo" onclick="refreshCatalog()" title="Натисніть, щоб оновити каталог">
             <i class="fas fa-store"></i> Продукт Плюс
           </div>
           <button class="cart-btn" onclick="toggleCart()">
@@ -476,26 +477,30 @@
     let displayedCount = 0;
     const PAGE_SIZE = 80;
     const CACHE_KEY = 'product_plus_cache';
-    const CACHE_TTL = 6 * 60 * 60 * 1000;
+    const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 година
     const photoExtensions = ['webp', 'png'];
 
-    async function loadData() {
+    async function loadData(forceRefresh = false) {
       const status = document.getElementById('status');
       status.textContent = 'Завантаження каталогу...';
 
-      try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_TTL && Array.isArray(data) && data.length > 0) {
-            products = data;
-            filteredProducts = products;
-            status.textContent = `✅ Завантажено ${products.length} товарів (з кешу)`;
-            resetAndRender();
-            return;
+      if (!forceRefresh) {
+        try {
+          const cached = localStorage.getItem(CACHE_KEY);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_TTL && Array.isArray(data) && data.length > 0) {
+              products = data;
+              filteredProducts = products;
+              status.textContent = `✅ Завантажено ${products.length} товарів (з кешу)`;
+              resetAndRender();
+              return;
+            }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      } else {
+        try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+      }
 
       try {
         const csvUrl = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
@@ -511,11 +516,20 @@
           }));
         } catch (e) {}
 
-        status.textContent = `✅ Завантажено ${products.length} товарів`;
+        status.textContent = forceRefresh
+          ? `✅ Каталог оновлено: ${products.length} товарів`
+          : `✅ Завантажено ${products.length} товарів`;
         resetAndRender();
       } catch (e) {
         status.textContent = '❌ Помилка завантаження. Оновіть сторінку (F5)';
       }
+    }
+
+    function refreshCatalog() {
+      const status = document.getElementById('status');
+      status.textContent = 'Оновлення каталогу...';
+      document.getElementById('search').value = '';
+      loadData(true);
     }
 
     function parseCSV(text) {
