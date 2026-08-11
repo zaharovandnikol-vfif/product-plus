@@ -471,11 +471,8 @@
   </div>
 
   <script>
-    // ================== TELEGRAM ==================
-    // ВСТАВ СВОЇ ДАНІ ТУТ:
-    const TELEGRAM_BOT_TOKEN = 'ВСТАВ_СЮДИ_ТОКЕН';
-    const TELEGRAM_CHAT_ID = 'ВСТАВ_СЮДИ_CHAT_ID';
-    // ==============================================
+    // Cloudflare Worker для Telegram (токен НЕ на сайті)
+    const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
 
     let products = [];
     let filteredProducts = [];
@@ -761,15 +758,15 @@
       message += `\n💰 Всього до сплати: ${total} грн\n`;
       if (note) message += `\n📝 Примітка: ${note}`;
 
-      // 1) На пошту (Formspree)
-      const formData = new FormData();
-      formData.append('message', message);
-      formData.append('_subject', `Замовлення від ${clientName}`);
-
       let emailOk = false;
       let telegramOk = false;
 
+      // 1) Пошта через Formspree
       try {
+        const formData = new FormData();
+        formData.append('message', message);
+        formData.append('_subject', `Замовлення від ${clientName}`);
+
         const emailRes = await fetch('https://formspree.io/f/mlgqrbdw', {
           method: 'POST',
           body: formData,
@@ -780,21 +777,14 @@
         emailOk = false;
       }
 
-      // 2) У Telegram
+      // 2) Telegram через Cloudflare Worker
       try {
-        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID &&
-            TELEGRAM_BOT_TOKEN !== '8618721280:AAGzpTZWindtSe875xJLjflFNWks5Z44b1A' &&
-            TELEGRAM_CHAT_ID !== '582502544') {
-          const tgRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: message
-            })
-          });
-          telegramOk = tgRes.ok;
-        }
+        const tgRes = await fetch(TELEGRAM_WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message })
+        });
+        telegramOk = tgRes.ok;
       } catch (err) {
         telegramOk = false;
       }
