@@ -471,6 +471,12 @@
   </div>
 
   <script>
+    // ================== TELEGRAM ==================
+    // ВСТАВ СВОЇ ДАНІ ТУТ:
+    const TELEGRAM_BOT_TOKEN = 'ВСТАВ_СЮДИ_ТОКЕН';
+    const TELEGRAM_CHAT_ID = 'ВСТАВ_СЮДИ_CHAT_ID';
+    // ==============================================
+
     let products = [];
     let filteredProducts = [];
     let cart = [];
@@ -526,8 +532,7 @@
     }
 
     function refreshCatalog() {
-      const status = document.getElementById('status');
-      status.textContent = 'Оновлення каталогу...';
+      document.getElementById('status').textContent = 'Оновлення каталогу...';
       document.getElementById('search').value = '';
       loadData(true);
     }
@@ -739,11 +744,11 @@
       if (!clientName) return alert('Введіть назву клієнта!');
       const note = document.getElementById('note').value.trim();
 
-      let message = `Нове замовлення\n\n`;
-      message += `Клієнт: ${clientName}\n`;
-      message += `Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
-      message += "Товари:\n";
-      message += "----------------------------------------\n";
+      let message = `🛒 Нове замовлення\n\n`;
+      message += `👤 Клієнт: ${clientName}\n`;
+      message += `📅 Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
+      message += `📦 Товари:\n`;
+      message += `----------------------------------------\n`;
 
       let total = 0;
       cart.forEach(item => {
@@ -751,27 +756,56 @@
         total += sum;
         message += `${item.code} | ${item.name}\n`;
         message += `Кількість: ${item.qty} шт. | Ціна: ${item.price} грн | Сума: ${sum} грн\n`;
-        message += "----------------------------------------\n";
+        message += `----------------------------------------\n`;
       });
-      message += `\nВсього до сплати: ${total} грн\n`;
-      if (note) message += `\nПримітка: ${note}`;
+      message += `\n💰 Всього до сплати: ${total} грн\n`;
+      if (note) message += `\n📝 Примітка: ${note}`;
 
+      // 1) На пошту (Formspree)
       const formData = new FormData();
       formData.append('message', message);
       formData.append('_subject', `Замовлення від ${clientName}`);
 
+      let emailOk = false;
+      let telegramOk = false;
+
       try {
-        await fetch('https://formspree.io/f/mlgqrbdw', {
+        const emailRes = await fetch('https://formspree.io/f/mlgqrbdw', {
           method: 'POST',
           body: formData,
           headers: { 'Accept': 'application/json' }
         });
+        emailOk = emailRes.ok;
+      } catch (err) {
+        emailOk = false;
+      }
+
+      // 2) У Telegram
+      try {
+        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID &&
+            TELEGRAM_BOT_TOKEN !== '8618721280:AAGzpTZWindtSe875xJLjflFNWks5Z44b1A' &&
+            TELEGRAM_CHAT_ID !== '582502544') {
+          const tgRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CHAT_ID,
+              text: message
+            })
+          });
+          telegramOk = tgRes.ok;
+        }
+      } catch (err) {
+        telegramOk = false;
+      }
+
+      if (emailOk || telegramOk) {
         alert('✅ Замовлення успішно відправлено!');
         cart = [];
         updateCartCount();
         hideOrderForm();
         document.getElementById('cart-modal').classList.remove('show');
-      } catch (err) {
+      } else {
         alert('Помилка відправки. Спробуйте пізніше.');
       }
     }
