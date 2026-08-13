@@ -488,6 +488,13 @@
   <script>
     const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
 
+    // ImageKit
+    const IK_ENDPOINT = 'https://ik.imagekit.io/fzp6munv3';
+    const IK_FOLDER = 'products';
+    const IK_CARD_TR = 'tr:w-160,h-160,c-at_max,q-80';
+    const IK_MODAL_TR = 'tr:w-600,q-90';
+    const photoExtensions = ['webp', 'png'];
+
     let products = [];
     let filteredProducts = [];
     let cart = [];
@@ -495,7 +502,6 @@
     const PAGE_SIZE = 80;
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
-    const photoExtensions = ['webp', 'png'];
 
     async function loadData(forceRefresh = false) {
       const status = document.getElementById('status');
@@ -582,22 +588,26 @@
       return result;
     }
 
-    // Варіанти фото: звичайні + з "n" (новинка)
+    // Варіанти фото в ImageKit: звичайні + з n (новинка)
     function getPhotoAttempts(code) {
       const attempts = [];
       photoExtensions.forEach(ext => {
         attempts.push({
-          url: `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${ext}`,
+          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}.${ext}`,
           isNew: false
         });
       });
       photoExtensions.forEach(ext => {
         attempts.push({
-          url: `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}n.${ext}`,
+          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}n.${ext}`,
           isNew: true
         });
       });
       return attempts;
+    }
+
+    function toModalUrl(cardUrl) {
+      return cardUrl.replace(IK_CARD_TR, IK_MODAL_TR);
     }
 
     function createProductCard(p) {
@@ -621,11 +631,7 @@
       img.onload = function() {
         const idx = parseInt(this.dataset.attempt || '0', 10);
         const current = attempts[idx];
-        if (current && current.isNew) {
-          badge.style.display = 'block';
-        } else {
-          badge.style.display = 'none';
-        }
+        badge.style.display = (current && current.isNew) ? 'block' : 'none';
       };
 
       img.onerror = function() {
@@ -641,7 +647,7 @@
 
       img.onclick = function() {
         if (this.style.visibility !== 'hidden') {
-          showImage(this.src);
+          showImage(toModalUrl(this.src));
         }
       };
 
