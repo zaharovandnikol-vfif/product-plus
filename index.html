@@ -390,6 +390,8 @@
       max-width: 90%;
       max-height: 90%;
       border-radius: 12px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
     }
 
     @media (max-width: 640px) {
@@ -588,7 +590,6 @@
       return result;
     }
 
-    // Варіанти фото в ImageKit: звичайні + з n (новинка)
     function getPhotoAttempts(code) {
       const attempts = [];
       photoExtensions.forEach(ext => {
@@ -711,8 +712,23 @@
     }
 
     function showImage(src) {
-      document.getElementById('modal-image').src = src;
-      document.getElementById('image-modal').classList.add('show');
+      const modal = document.getElementById('image-modal');
+      const img = document.getElementById('modal-image');
+
+      // Ховаємо попереднє фото одразу
+      img.style.opacity = '0';
+      img.removeAttribute('src');
+
+      img.onload = function() {
+        img.style.opacity = '1';
+      };
+
+      img.onerror = function() {
+        img.style.opacity = '1';
+      };
+
+      img.src = src;
+      modal.classList.add('show');
     }
 
     function addToCart(id) {
