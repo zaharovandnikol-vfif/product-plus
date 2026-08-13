@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Продукт Плюс — Оптовий магазин</title>
+  <link rel="preconnect" href="https://ik.imagekit.io" crossorigin>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -120,14 +121,14 @@
     }
     .product-card:hover { border-color: #93c5fd; }
     .photo-slot {
-      width: 80px;
-      height: 80px;
+      width: 72px;
+      height: 72px;
       flex-shrink: 0;
       position: relative;
     }
     .product-img {
-      width: 80px;
-      height: 80px;
+      width: 72px;
+      height: 72px;
       object-fit: cover;
       border-radius: 8px;
       border: 1px solid #e5e7eb;
@@ -490,18 +491,17 @@
   <script>
     const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
 
-    // ImageKit
+    // ImageKit (оптимізовано)
     const IK_ENDPOINT = 'https://ik.imagekit.io/fzp6munv3';
     const IK_FOLDER = 'products';
-    const IK_CARD_TR = 'tr:w-160,h-160,c-at_max,q-80';
+    const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,q-75';
     const IK_MODAL_TR = 'tr:w-600,q-90';
-    const photoExtensions = ['webp', 'png'];
 
     let products = [];
     let filteredProducts = [];
     let cart = [];
     let displayedCount = 0;
-    const PAGE_SIZE = 80;
+    const PAGE_SIZE = 40; // менше карток за раз
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
 
@@ -590,21 +590,18 @@
       return result;
     }
 
+    // Тільки .webp: звичайне + новинка (n)
     function getPhotoAttempts(code) {
-      const attempts = [];
-      photoExtensions.forEach(ext => {
-        attempts.push({
-          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}.${ext}`,
+      return [
+        {
+          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}.webp`,
           isNew: false
-        });
-      });
-      photoExtensions.forEach(ext => {
-        attempts.push({
-          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}n.${ext}`,
+        },
+        {
+          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}n.webp`,
           isNew: true
-        });
-      });
-      return attempts;
+        }
+      ];
     }
 
     function toModalUrl(cardUrl) {
@@ -715,7 +712,6 @@
       const modal = document.getElementById('image-modal');
       const img = document.getElementById('modal-image');
 
-      // Ховаємо попереднє фото одразу
       img.style.opacity = '0';
       img.removeAttribute('src');
 
