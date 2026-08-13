@@ -123,6 +123,7 @@
       width: 80px;
       height: 80px;
       flex-shrink: 0;
+      position: relative;
     }
     .product-img {
       width: 80px;
@@ -135,6 +136,20 @@
       background: #f3f4f6;
     }
     .product-img:hover { transform: scale(1.06); }
+    .badge-new {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      background: #facc15;
+      color: #713f12;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      z-index: 2;
+      display: none;
+    }
     .product-info { flex: 1; min-width: 180px; }
     .product-code {
       font-size: 0.85rem;
@@ -471,7 +486,6 @@
   </div>
 
   <script>
-    // Cloudflare Worker для Telegram (токен НЕ на сайті)
     const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
 
     let products = [];
@@ -480,7 +494,7 @@
     let displayedCount = 0;
     const PAGE_SIZE = 80;
     const CACHE_KEY = 'product_plus_cache';
-    const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 година
+    const CACHE_TTL = 1 * 60 * 60 * 1000;
     const photoExtensions = ['webp', 'png'];
 
     async function loadData(forceRefresh = false) {
@@ -568,29 +582,60 @@
       return result;
     }
 
-    function getPhotoUrl(code, index) {
-      return `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${photoExtensions[index]}`;
+    // Варіанти фото: звичайні + з "n" (новинка)
+    function getPhotoAttempts(code) {
+      const attempts = [];
+      photoExtensions.forEach(ext => {
+        attempts.push({
+          url: `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}.${ext}`,
+          isNew: false
+        });
+      });
+      photoExtensions.forEach(ext => {
+        attempts.push({
+          url: `https://raw.githubusercontent.com/zaharovandnikol-vfif/product-plus/main/photos/${code}n.${ext}`,
+          isNew: true
+        });
+      });
+      return attempts;
     }
 
     function createProductCard(p) {
       const card = document.createElement('div');
       card.className = 'product-card';
 
+      const attempts = getPhotoAttempts(p.code);
+
       const img = document.createElement('img');
       img.alt = p.name;
       img.className = 'product-img';
       img.loading = 'lazy';
       img.decoding = 'async';
-      img.dataset.ext = '0';
-      img.src = getPhotoUrl(p.code, 0);
+      img.dataset.attempt = '0';
+      img.src = attempts[0].url;
+
+      const badge = document.createElement('span');
+      badge.className = 'badge-new';
+      badge.textContent = 'Новинка';
+
+      img.onload = function() {
+        const idx = parseInt(this.dataset.attempt || '0', 10);
+        const current = attempts[idx];
+        if (current && current.isNew) {
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      };
 
       img.onerror = function() {
-        let next = parseInt(this.dataset.ext || '0', 10) + 1;
-        if (next < photoExtensions.length) {
-          this.dataset.ext = String(next);
-          this.src = getPhotoUrl(p.code, next);
+        let next = parseInt(this.dataset.attempt || '0', 10) + 1;
+        if (next < attempts.length) {
+          this.dataset.attempt = String(next);
+          this.src = attempts[next].url;
         } else {
           this.style.visibility = 'hidden';
+          badge.style.display = 'none';
         }
       };
 
@@ -617,7 +662,10 @@
           </button>
         </div>
       `;
-      card.querySelector('.photo-slot').appendChild(img);
+
+      const slot = card.querySelector('.photo-slot');
+      slot.appendChild(badge);
+      slot.appendChild(img);
       return card;
     }
 
@@ -761,7 +809,6 @@
       let emailOk = false;
       let telegramOk = false;
 
-      // 1) Пошта через Formspree
       try {
         const formData = new FormData();
         formData.append('message', message);
@@ -777,7 +824,6 @@
         emailOk = false;
       }
 
-      // 2) Telegram через Cloudflare Worker
       try {
         const tgRes = await fetch(TELEGRAM_WORKER_URL, {
           method: 'POST',
