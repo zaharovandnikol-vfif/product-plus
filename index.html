@@ -491,19 +491,30 @@
   <script>
     const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
 
-    // ImageKit (оптимізовано)
+    // ImageKit
     const IK_ENDPOINT = 'https://ik.imagekit.io/fzp6munv3';
     const IK_FOLDER = 'products';
-    const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,q-75';
-    const IK_MODAL_TR = 'tr:w-600,q-90';
+    // Прев’ю: автоформат + розумне кадрування
+    const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,fo-auto,q-75,f-auto';
+    // Модалка: більший розмір + автоформат
+    const IK_MODAL_TR = 'tr:w-600,q-90,f-auto';
+    // Збільшуй на 1 після масової заміни фото (щоб скинути кеш)
+    const PHOTO_VERSION = '1';
+    // Заглушка в ImageKit: products/placeholder.webp
+    const PLACEHOLDER_KEY = 'placeholder';
 
     let products = [];
     let filteredProducts = [];
     let cart = [];
     let displayedCount = 0;
-    const PAGE_SIZE = 40; // менше карток за раз
+    let modalRequestId = 0;
+    const PAGE_SIZE = 40;
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
+
+    function ikUrl(transform, fileKey) {
+      return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.webp?v=${PHOTO_VERSION}`;
+    }
 
     async function loadData(forceRefresh = false) {
       const status = document.getElementById('status');
@@ -590,22 +601,21 @@
       return result;
     }
 
-    // Тільки .webp: звичайне + новинка (n)
     function getPhotoAttempts(code) {
       return [
         {
-          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}.webp`,
-          isNew: false
+          url: ikUrl(IK_CARD_TR, code),
+          fileKey: String(code),
+          isNew: false,
+          isPlaceholder: false
         },
         {
-          url: `${IK_ENDPOINT}/${IK_CARD_TR}/${IK_FOLDER}/${code}n.webp`,
-          isNew: true
+          url: ikUrl(IK_CARD_TR, code + 'n'),
+          fileKey: String(code) + 'n',
+          isNew: true,
+          isPlaceholder: false
         }
       ];
-    }
-
-    function toModalUrl(cardUrl) {
-      return cardUrl.replace(IK_CARD_TR, IK_MODAL_TR);
     }
 
     function createProductCard(p) {
@@ -620,33 +630,48 @@
       img.loading = 'lazy';
       img.decoding = 'async';
       img.dataset.attempt = '0';
+      img.dataset.fileKey = attempts[0].fileKey;
+      img.dataset.isPlaceholder = '0';
       img.src = attempts[0].url;
 
       const badge = document.createElement('span');
       badge.className = 'badge-new';
       badge.textContent = 'Новинка';
 
-      img.onload = function() {
+      img.onload = function () {
         const idx = parseInt(this.dataset.attempt || '0', 10);
         const current = attempts[idx];
-        badge.style.display = (current && current.isNew) ? 'block' : 'none';
+        if (current) {
+          this.dataset.fileKey = current.fileKey;
+          this.dataset.isPlaceholder = '0';
+          badge.style.display = current.isNew ? 'block' : 'none';
+        }
       };
 
-      img.onerror = function() {
+      img.onerror = function () {
         let next = parseInt(this.dataset.attempt || '0', 10) + 1;
         if (next < attempts.length) {
           this.dataset.attempt = String(next);
+          this.dataset.fileKey = attempts[next].fileKey;
           this.src = attempts[next].url;
         } else {
-          this.style.visibility = 'hidden';
+          // Заглушка, якщо немає ні звичайного, ні n-фото
+          this.dataset.fileKey = PLACEHOLDER_KEY;
+          this.dataset.isPlaceholder = '1';
+          this.src = ikUrl(IK_CARD_TR, PLACEHOLDER_KEY);
+          this.style.visibility = 'visible';
           badge.style.display = 'none';
+          this.onerror = function () {
+            this.style.visibility = 'hidden';
+          };
         }
       };
 
-      img.onclick = function() {
-        if (this.style.visibility !== 'hidden') {
-          showImage(toModalUrl(this.src));
-        }
+      img.onclick = function () {
+        if (this.style.visibility === 'hidden') return;
+        if (this.dataset.isPlaceholder === '1') return;
+        const fileKey = this.dataset.fileKey || String(p.code);
+        showImage(ikUrl(IK_MODAL_TR, fileKey));
       };
 
       card.innerHTML = `
@@ -711,15 +736,18 @@
     function showImage(src) {
       const modal = document.getElementById('image-modal');
       const img = document.getElementById('modal-image');
+      const requestId = ++modalRequestId;
 
       img.style.opacity = '0';
       img.removeAttribute('src');
 
-      img.onload = function() {
+      img.onload = function () {
+        if (requestId !== modalRequestId) return;
         img.style.opacity = '1';
       };
 
-      img.onerror = function() {
+      img.onerror = function () {
+        if (requestId !== modalRequestId) return;
         img.style.opacity = '1';
       };
 
