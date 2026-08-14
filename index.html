@@ -494,13 +494,10 @@
     // ImageKit
     const IK_ENDPOINT = 'https://ik.imagekit.io/fzp6munv3';
     const IK_FOLDER = 'products';
-    // Прев’ю: автоформат + розумне кадрування
     const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,fo-auto,q-75,f-auto';
-    // Модалка: більший розмір + автоформат
     const IK_MODAL_TR = 'tr:w-600,q-90,f-auto';
-    // Збільшуй на 1 після масової заміни фото (щоб скинути кеш)
+    // Збільшуй тільки після масової заміни фото з тими самими іменами
     const PHOTO_VERSION = '1';
-    // Заглушка в ImageKit: products/placeholder.webp
     const PLACEHOLDER_KEY = 'placeholder';
 
     let products = [];
@@ -606,14 +603,12 @@
         {
           url: ikUrl(IK_CARD_TR, code),
           fileKey: String(code),
-          isNew: false,
-          isPlaceholder: false
+          isNew: false
         },
         {
           url: ikUrl(IK_CARD_TR, code + 'n'),
           fileKey: String(code) + 'n',
-          isNew: true,
-          isPlaceholder: false
+          isNew: true
         }
       ];
     }
@@ -639,11 +634,16 @@
       badge.textContent = 'Новинка';
 
       img.onload = function () {
+        // Заглушка ніколи не отримує ярлик «Новинка»
+        if (this.dataset.isPlaceholder === '1') {
+          badge.style.display = 'none';
+          return;
+        }
+
         const idx = parseInt(this.dataset.attempt || '0', 10);
         const current = attempts[idx];
         if (current) {
           this.dataset.fileKey = current.fileKey;
-          this.dataset.isPlaceholder = '0';
           badge.style.display = current.isNew ? 'block' : 'none';
         }
       };
@@ -653,14 +653,15 @@
         if (next < attempts.length) {
           this.dataset.attempt = String(next);
           this.dataset.fileKey = attempts[next].fileKey;
+          this.dataset.isPlaceholder = '0';
           this.src = attempts[next].url;
         } else {
-          // Заглушка, якщо немає ні звичайного, ні n-фото
-          this.dataset.fileKey = PLACEHOLDER_KEY;
+          // Немає фото товару → заглушка
           this.dataset.isPlaceholder = '1';
+          this.dataset.fileKey = PLACEHOLDER_KEY;
+          badge.style.display = 'none';
           this.src = ikUrl(IK_CARD_TR, PLACEHOLDER_KEY);
           this.style.visibility = 'visible';
-          badge.style.display = 'none';
           this.onerror = function () {
             this.style.visibility = 'hidden';
           };
