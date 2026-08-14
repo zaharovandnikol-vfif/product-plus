@@ -137,19 +137,31 @@
       background: #f3f4f6;
     }
     .product-img:hover { transform: scale(1.06); }
-    .badge-new {
+    .badges {
       position: absolute;
       top: -6px;
       left: -6px;
-      background: #facc15;
-      color: #713f12;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 2;
+    }
+    .badge-new,
+    .badge-sale {
       font-size: 0.7rem;
       font-weight: 700;
       padding: 3px 7px;
       border-radius: 6px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-      z-index: 2;
-      display: none;
+      white-space: nowrap;
+    }
+    .badge-new {
+      background: #facc15;
+      color: #713f12;
+    }
+    .badge-sale {
+      background: #ef4444;
+      color: #fff;
     }
     .product-info { flex: 1; min-width: 180px; }
     .product-code {
@@ -491,12 +503,10 @@
   <script>
     const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
 
-    // ImageKit
     const IK_ENDPOINT = 'https://ik.imagekit.io/fzp6munv3';
     const IK_FOLDER = 'products';
     const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,fo-auto,q-75,f-auto';
     const IK_MODAL_TR = 'tr:w-600,q-90,f-auto';
-    // Збільшуй тільки після масової заміни фото з тими самими іменами
     const PHOTO_VERSION = '1';
     const PLACEHOLDER_KEY = 'placeholder';
 
@@ -564,6 +574,20 @@
       loadData(true);
     }
 
+    function parsePrice(value) {
+      if (value === undefined || value === null) return 0;
+      const priceStr = value.toString().replace(/[^0-9.,]/g, '').replace(',', '.');
+      return parseFloat(priceStr) || 0;
+    }
+
+    function parseAttributes(value) {
+      const raw = (value || '').toString().toLowerCase();
+      return {
+        isNew: raw.includes('n'),
+        isSale: raw.includes('s')
+      };
+    }
+
     function parseCSV(text) {
       const lines = text.trim().split('\n');
       const result = [];
@@ -582,15 +606,26 @@
         }
 
         if (cells[2]) {
-          let priceStr = (cells[4] || cells[3] || "").replace(/[^0-9.,]/g, '').replace(',', '.');
-          const price = parseFloat(priceStr) || 0;
+          // Ціна: спочатку col4, інакше col3 (як раніше)
+          let priceCol = 4;
+          let price = parsePrice(cells[4]);
+          if (price <= 0) {
+            price = parsePrice(cells[3]);
+            priceCol = 3;
+          }
+
+          // Атрибут — колонка одразу після ціни
+          const attrs = parseAttributes(cells[priceCol + 1]);
+
           if (price > 0) {
             result.push({
               id: cells[1] || String(i),
               code: cells[1] || '',
               name: cells[2],
               price: price,
-              group: currentGroup
+              group: currentGroup,
+              isNew: attrs.isNew,
+              isSale: attrs.isSale
             });
           }
         }
@@ -598,74 +633,42 @@
       return result;
     }
 
-    function getPhotoAttempts(code) {
-      return [
-        {
-          url: ikUrl(IK_CARD_TR, code),
-          fileKey: String(code),
-          isNew: false
-        },
-        {
-          url: ikUrl(IK_CARD_TR, code + 'n'),
-          fileKey: String(code) + 'n',
-          isNew: true
-        }
-      ];
-    }
-
     function createProductCard(p) {
       const card = document.createElement('div');
       card.className = 'product-card';
-
-      const attempts = getPhotoAttempts(p.code);
 
       const img = document.createElement('img');
       img.alt = p.name;
       img.className = 'product-img';
       img.loading = 'lazy';
       img.decoding = 'async';
-      img.dataset.attempt = '0';
-      img.dataset.fileKey = attempts[0].fileKey;
+      img.dataset.fileKey = String(p.code);
       img.dataset.isPlaceholder = '0';
-      img.src = attempts[0].url;
+      img.src = ikUrl(IK_CARD_TR, p.code);
 
-      const badge = document.createElement('span');
-      badge.className = 'badge-new';
-      badge.textContent = 'Новинка';
+      const badges = document.createElement('div');
+      badges.className = 'badges';
 
-      img.onload = function () {
-        // Заглушка ніколи не отримує ярлик «Новинка»
-        if (this.dataset.isPlaceholder === '1') {
-          badge.style.display = 'none';
-          return;
-        }
-
-        const idx = parseInt(this.dataset.attempt || '0', 10);
-        const current = attempts[idx];
-        if (current) {
-          this.dataset.fileKey = current.fileKey;
-          badge.style.display = current.isNew ? 'block' : 'none';
-        }
-      };
+      if (p.isNew) {
+        const b = document.createElement('span');
+        b.className = 'badge-new';
+        b.textContent = 'Новинка';
+        badges.appendChild(b);
+      }
+      if (p.isSale) {
+        const b = document.createElement('span');
+        b.className = 'badge-sale';
+        b.textContent = 'Розпродаж';
+        badges.appendChild(b);
+      }
 
       img.onerror = function () {
-        let next = parseInt(this.dataset.attempt || '0', 10) + 1;
-        if (next < attempts.length) {
-          this.dataset.attempt = String(next);
-          this.dataset.fileKey = attempts[next].fileKey;
-          this.dataset.isPlaceholder = '0';
-          this.src = attempts[next].url;
-        } else {
-          // Немає фото товару → заглушка
-          this.dataset.isPlaceholder = '1';
-          this.dataset.fileKey = PLACEHOLDER_KEY;
-          badge.style.display = 'none';
-          this.src = ikUrl(IK_CARD_TR, PLACEHOLDER_KEY);
-          this.style.visibility = 'visible';
-          this.onerror = function () {
-            this.style.visibility = 'hidden';
-          };
-        }
+        this.dataset.isPlaceholder = '1';
+        this.dataset.fileKey = PLACEHOLDER_KEY;
+        this.src = ikUrl(IK_CARD_TR, PLACEHOLDER_KEY);
+        this.onerror = function () {
+          this.style.visibility = 'hidden';
+        };
       };
 
       img.onclick = function () {
@@ -694,7 +697,7 @@
       `;
 
       const slot = card.querySelector('.photo-slot');
-      slot.appendChild(badge);
+      if (badges.childNodes.length) slot.appendChild(badges);
       slot.appendChild(img);
       return card;
     }
