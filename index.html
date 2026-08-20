@@ -147,7 +147,8 @@
       z-index: 2;
     }
     .badge-new,
-    .badge-sale {
+    .badge-sale,
+    .badge-action {
       font-size: 0.7rem;
       font-weight: 700;
       padding: 3px 7px;
@@ -161,6 +162,10 @@
     }
     .badge-sale {
       background: #ef4444;
+      color: #fff;
+    }
+    .badge-action {
+      background: #b91c1c;
       color: #fff;
     }
     .product-info { flex: 1; min-width: 180px; }
@@ -515,6 +520,8 @@
     let cart = [];
     let displayedCount = 0;
     let modalRequestId = 0;
+    let searchTimer = null;
+    let notfotoToken = 0;
     const PAGE_SIZE = 40;
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
@@ -584,7 +591,8 @@
       const raw = (value || '').toString().toLowerCase();
       return {
         isNew: raw.includes('n'),
-        isSale: raw.includes('s')
+        isSale: raw.includes('s'),
+        isAction: raw.includes('a')
       };
     }
 
@@ -606,7 +614,6 @@
         }
 
         if (cells[2]) {
-          // Ціна: спочатку col4, інакше col3 (як раніше)
           let priceCol = 4;
           let price = parsePrice(cells[4]);
           if (price <= 0) {
@@ -614,7 +621,6 @@
             priceCol = 3;
           }
 
-          // Атрибут — колонка одразу після ціни
           const attrs = parseAttributes(cells[priceCol + 1]);
 
           if (price > 0) {
@@ -625,12 +631,51 @@
               price: price,
               group: currentGroup,
               isNew: attrs.isNew,
-              isSale: attrs.isSale
+              isSale: attrs.isSale,
+              isAction: attrs.isAction
             });
           }
         }
       }
       return result;
+    }
+
+    function checkPhotoExists(code) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const done = (ok) => resolve(ok);
+        img.onload = () => done(true);
+        img.onerror = () => done(false);
+        img.src = ikUrl(IK_CARD_TR, code);
+      });
+    }
+
+    async function findProductsWithoutPhotos() {
+      const status = document.getElementById('status');
+      const token = ++notfotoToken;
+      const missing = [];
+      const batchSize = 12;
+
+      status.textContent = 'Режим notfoto: перевірка фото...';
+
+      for (let i = 0; i < products.length; i += batchSize) {
+        if (token !== notfotoToken) return;
+
+        const batch = products.slice(i, i + batchSize);
+        const results = await Promise.all(batch.map(p => checkPhotoExists(p.code)));
+
+        batch.forEach((p, idx) => {
+          if (!results[idx]) missing.push(p);
+        });
+
+        status.textContent = `Режим notfoto: перевірка ${Math.min(i + batchSize, products.length)}/${products.length}... знайдено без фото: ${missing.length}`;
+      }
+
+      if (token !== notfotoToken) return;
+
+      filteredProducts = missing;
+      status.textContent = `🔧 Режим notfoto: без фото — ${missing.length} з ${products.length}`;
+      resetAndRender();
     }
 
     function createProductCard(p) {
@@ -659,6 +704,12 @@
         const b = document.createElement('span');
         b.className = 'badge-sale';
         b.textContent = 'Розпродаж';
+        badges.appendChild(b);
+      }
+      if (p.isAction) {
+        const b = document.createElement('span');
+        b.className = 'badge-action';
+        b.textContent = 'АКЦІЯ!';
         badges.appendChild(b);
       }
 
@@ -729,11 +780,22 @@
 
     function filterProducts() {
       const search = document.getElementById('search').value.toLowerCase().trim();
+
+      // Секретний режим для адміна: товари без фото
+      if (search === 'notfoto' || search === 'notfoto*') {
+        findProductsWithoutPhotos();
+        return;
+      }
+
+      notfotoToken++; // скасувати попередній notfoto-пошук, якщо був
+
       filteredProducts = products.filter(p =>
         !search ||
         p.name.toLowerCase().includes(search) ||
         p.code.toLowerCase().includes(search)
       );
+      document.getElementById('status').textContent =
+        search ? `Знайдено: ${filteredProducts.length}` : `✅ Завантажено ${products.length} товарів`;
       resetAndRender();
     }
 
@@ -903,7 +965,10 @@
 
     window.onload = function() {
       loadData();
-      document.getElementById('search').addEventListener('input', filterProducts);
+      document.getElementById('search').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(filterProducts, 300);
+      });
     };
   </script>
 </body>
