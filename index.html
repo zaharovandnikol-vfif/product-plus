@@ -231,8 +231,26 @@
     #status {
       text-align: center;
       color: #6b7280;
-      padding: 24px 0;
+      padding: 24px 0 8px;
       font-size: 0.9rem;
+    }
+
+    .admin-tools {
+      text-align: center;
+      padding: 0 0 28px;
+    }
+    #photo-version-btn {
+      background: transparent;
+      border: none;
+      color: #9ca3af;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    #photo-version-btn:hover {
+      color: #6b7280;
+      background: #f3f4f6;
     }
 
     #back-to-top {
@@ -438,6 +456,7 @@
           <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
           <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
           <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
+          <span><i class="fas fa-clock"></i> Графік роботи: <strong>8:30 – 19:00</strong></span>
           <span><i class="fas fa-location-dot"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
         </div>
       </div>
@@ -456,6 +475,9 @@
       <button id="load-more" onclick="loadMore()" style="display:none;">Показати ще</button>
     </div>
     <div id="status"></div>
+    <div class="admin-tools">
+      <button id="photo-version-btn" type="button" onclick="cyclePhotoVersion()" title="Змінити версію фото (після заміни картинок)">фото v1</button>
+    </div>
   </div>
 
   <button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
@@ -480,7 +502,7 @@
         </div>
         <button class="order-btn" onclick="showOrderForm()">Оформити замовлення</button>
         <p class="warning-text">
-          Увага! Кількість замовляємого вами товару на момент формування замовлення оператором може змінитися. Для НЕ ФОП клієнтів замовлення будуть збиратися при суммі замовлення від 1000грн
+          Увага! Кількість замовляємого вами товару на момент формування замовлення оператором може змінитися.
         </p>
       </div>
     </div>
@@ -512,8 +534,8 @@
     const IK_FOLDER = 'products';
     const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,fo-auto,q-75,f-auto';
     const IK_MODAL_TR = 'tr:w-600,q-90,f-auto';
-    const PHOTO_VERSION = '1';
     const PLACEHOLDER_KEY = 'placeholder';
+    const PHOTO_VERSION_KEY = 'product_plus_photo_v';
 
     let products = [];
     let filteredProducts = [];
@@ -526,8 +548,32 @@
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
 
+    function getPhotoVersion() {
+      try {
+        const v = localStorage.getItem(PHOTO_VERSION_KEY);
+        if (v === '1' || v === '2' || v === '3') return v;
+      } catch (e) {}
+      return '1';
+    }
+
+    function updatePhotoVersionButton() {
+      const btn = document.getElementById('photo-version-btn');
+      if (btn) btn.textContent = 'фото v' + getPhotoVersion();
+    }
+
+    function cyclePhotoVersion() {
+      const cur = getPhotoVersion();
+      const next = cur === '1' ? '2' : (cur === '2' ? '3' : '1');
+      try {
+        localStorage.setItem(PHOTO_VERSION_KEY, next);
+      } catch (e) {}
+      updatePhotoVersionButton();
+      resetAndRender();
+      alert('Версія фото змінена на v' + next + '\n(використовуйте після заміни картинок у ImageKit)');
+    }
+
     function ikUrl(transform, fileKey) {
-      return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.webp?v=${PHOTO_VERSION}`;
+      return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.webp?v=${getPhotoVersion()}`;
     }
 
     async function loadData(forceRefresh = false) {
@@ -643,9 +689,8 @@
     function checkPhotoExists(code) {
       return new Promise((resolve) => {
         const img = new Image();
-        const done = (ok) => resolve(ok);
-        img.onload = () => done(true);
-        img.onerror = () => done(false);
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
         img.src = ikUrl(IK_CARD_TR, code);
       });
     }
@@ -781,13 +826,12 @@
     function filterProducts() {
       const search = document.getElementById('search').value.toLowerCase().trim();
 
-      // Секретний режим для адміна: товари без фото
       if (search === 'notfoto' || search === 'notfoto*') {
         findProductsWithoutPhotos();
         return;
       }
 
-      notfotoToken++; // скасувати попередній notfoto-пошук, якщо був
+      notfotoToken++;
 
       filteredProducts = products.filter(p =>
         !search ||
@@ -964,6 +1008,7 @@
     });
 
     window.onload = function() {
+      updatePhotoVersionButton();
       loadData();
       document.getElementById('search').addEventListener('input', function () {
         clearTimeout(searchTimer);
