@@ -529,6 +529,7 @@
 
   <script>
     const TELEGRAM_WORKER_URL = 'https://product-plus-orders.zaharov-and-nikol.workers.dev';
+    const TELEGRAM_MAX_LEN = 3500;
 
     const IK_ENDPOINT = 'https://ik.imagekit.io/fzp6munv3';
     const IK_FOLDER = 'products';
@@ -574,6 +575,61 @@
 
     function ikUrl(transform, fileKey) {
       return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.webp?v=${getPhotoVersion()}`;
+    }
+
+    function splitTelegramMessage(text, maxLen) {
+      if (text.length <= maxLen) return [text];
+
+      const lines = text.split('\n');
+      const chunks = [];
+      let current = '';
+
+      for (const line of lines) {
+        const piece = current ? current + '\n' + line : line;
+
+        if (piece.length <= maxLen) {
+          current = piece;
+          continue;
+        }
+
+        if (current) chunks.push(current);
+
+        if (line.length <= maxLen) {
+          current = line;
+        } else {
+          for (let i = 0; i < line.length; i += maxLen) {
+            chunks.push(line.slice(i, i + maxLen));
+          }
+          current = '';
+        }
+      }
+
+      if (current) chunks.push(current);
+      return chunks.length ? chunks : [text.slice(0, maxLen)];
+    }
+
+    async function sendTelegramMessage(fullMessage) {
+      const chunks = splitTelegramMessage(fullMessage, TELEGRAM_MAX_LEN);
+      let allOk = true;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const bodyText = chunks.length > 1
+          ? `📄 Частина ${i + 1}/${chunks.length}\n\n${chunks[i]}`
+          : chunks[i];
+
+        try {
+          const tgRes = await fetch(TELEGRAM_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: bodyText })
+          });
+          if (!tgRes.ok) allOk = false;
+        } catch (err) {
+          allOk = false;
+        }
+      }
+
+      return allOk;
     }
 
     async function loadData(forceRefresh = false) {
@@ -980,16 +1036,7 @@
         emailOk = false;
       }
 
-      try {
-        const tgRes = await fetch(TELEGRAM_WORKER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message })
-        });
-        telegramOk = tgRes.ok;
-      } catch (err) {
-        telegramOk = false;
-      }
+      telegramOk = await sendTelegramMessage(message);
 
       if (emailOk || telegramOk) {
         alert('✅ Замовлення успішно відправлено!');
