@@ -36,6 +36,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px 0 8px;
+      gap: 12px;
     }
     .logo {
       font-size: 1.75rem;
@@ -52,15 +53,27 @@
       background: #2563eb;
       border: none;
       color: white;
-      padding: 10px 18px;
+      padding: 10px 14px;
       border-radius: 12px;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.95rem;
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-shrink: 0;
     }
     .cart-btn:hover { background: #3b82f6; }
+    .cart-btn-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.15;
+    }
+    .cart-btn-sum {
+      font-size: 0.8rem;
+      opacity: 0.95;
+      font-weight: 600;
+    }
     #cart-count {
       position: absolute;
       top: -8px;
@@ -69,9 +82,10 @@
       color: white;
       font-size: 12px;
       font-weight: 700;
-      width: 20px;
+      min-width: 20px;
       height: 20px;
-      border-radius: 50%;
+      padding: 0 5px;
+      border-radius: 999px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -91,7 +105,7 @@
       border-bottom: 1px solid #e5e7eb;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-    .search-wrap { padding: 12px 0; }
+    .search-wrap { padding: 12px 0 8px; }
     #search {
       width: 100%;
       padding: 14px 18px;
@@ -101,6 +115,44 @@
       outline: none;
     }
     #search:focus { border-color: #3b82f6; }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 0 12px;
+    }
+    .filter-chip {
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #374151;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .filter-chip:hover { border-color: #93c5fd; }
+    .filter-chip.active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+    .filter-chip.active-new {
+      background: #facc15;
+      border-color: #eab308;
+      color: #713f12;
+    }
+    .filter-chip.active-sale {
+      background: #ef4444;
+      border-color: #dc2626;
+      color: #fff;
+    }
+    .filter-chip.active-action {
+      background: #b91c1c;
+      border-color: #991b1b;
+      color: #fff;
+    }
 
     #products {
       padding: 24px 0;
@@ -435,6 +487,8 @@
       .product-card { padding: 14px; }
       .price-value { font-size: 1.2rem; }
       .contacts { font-size: 0.8rem; }
+      .cart-btn { padding: 8px 12px; }
+      .cart-btn-sum { font-size: 0.75rem; }
     }
   </style>
 </head>
@@ -449,6 +503,10 @@
           </div>
           <button class="cart-btn" onclick="toggleCart()">
             <i class="fas fa-shopping-cart"></i>
+            <span class="cart-btn-text">
+              <span>Кошик</span>
+              <span class="cart-btn-sum" id="cart-header-sum">0 грн</span>
+            </span>
             <span id="cart-count">0</span>
           </button>
         </div>
@@ -465,6 +523,12 @@
     <div class="search-bar">
       <div class="container search-wrap">
         <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару...">
+        <div class="filter-chips">
+          <button type="button" class="filter-chip active" data-filter="all" onclick="setAttrFilter('all')">Усі</button>
+          <button type="button" class="filter-chip" data-filter="new" onclick="setAttrFilter('new')">Новинки</button>
+          <button type="button" class="filter-chip" data-filter="action" onclick="setAttrFilter('action')">Акції</button>
+          <button type="button" class="filter-chip" data-filter="sale" onclick="setAttrFilter('sale')">Розпродаж</button>
+        </div>
       </div>
     </div>
   </div>
@@ -537,6 +601,7 @@
     const IK_MODAL_TR = 'tr:w-600,q-90,f-auto';
     const PLACEHOLDER_KEY = 'placeholder';
     const PHOTO_VERSION_KEY = 'product_plus_photo_v';
+    const CLIENT_NAME_KEY = 'product_plus_client_name';
 
     let products = [];
     let filteredProducts = [];
@@ -545,6 +610,7 @@
     let modalRequestId = 0;
     let searchTimer = null;
     let notfotoToken = 0;
+    let attrFilter = 'all';
     const PAGE_SIZE = 40;
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
@@ -575,6 +641,19 @@
 
     function ikUrl(transform, fileKey) {
       return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.webp?v=${getPhotoVersion()}`;
+    }
+
+    function loadSavedClientName() {
+      try {
+        const name = localStorage.getItem(CLIENT_NAME_KEY);
+        if (name) document.getElementById('client-name').value = name;
+      } catch (e) {}
+    }
+
+    function saveClientName(name) {
+      try {
+        if (name) localStorage.setItem(CLIENT_NAME_KEY, name);
+      } catch (e) {}
     }
 
     function splitTelegramMessage(text, maxLen) {
@@ -643,9 +722,8 @@
             const { data, timestamp } = JSON.parse(cached);
             if (Date.now() - timestamp < CACHE_TTL && Array.isArray(data) && data.length > 0) {
               products = data;
-              filteredProducts = products;
+              applyFilters();
               status.textContent = `✅ Завантажено ${products.length} товарів (з кешу)`;
-              resetAndRender();
               return;
             }
           }
@@ -659,7 +737,6 @@
         const response = await fetch(csvUrl);
         const text = await response.text();
         products = parseCSV(text);
-        filteredProducts = products;
 
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -668,10 +745,10 @@
           }));
         } catch (e) {}
 
+        applyFilters();
         status.textContent = forceRefresh
           ? `✅ Каталог оновлено: ${products.length} товарів`
           : `✅ Завантажено ${products.length} товарів`;
-        resetAndRender();
       } catch (e) {
         status.textContent = '❌ Помилка завантаження. Оновіть сторінку (F5)';
       }
@@ -680,6 +757,8 @@
     function refreshCatalog() {
       document.getElementById('status').textContent = 'Оновлення каталогу...';
       document.getElementById('search').value = '';
+      attrFilter = 'all';
+      updateFilterChips();
       loadData(true);
     }
 
@@ -879,7 +958,26 @@
       }
     }
 
-    function filterProducts() {
+    function updateFilterChips() {
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        const f = chip.getAttribute('data-filter');
+        chip.classList.remove('active', 'active-new', 'active-sale', 'active-action');
+        if (f === attrFilter) {
+          if (f === 'new') chip.classList.add('active-new');
+          else if (f === 'sale') chip.classList.add('active-sale');
+          else if (f === 'action') chip.classList.add('active-action');
+          else chip.classList.add('active');
+        }
+      });
+    }
+
+    function setAttrFilter(filter) {
+      attrFilter = filter;
+      updateFilterChips();
+      applyFilters();
+    }
+
+    function applyFilters() {
       const search = document.getElementById('search').value.toLowerCase().trim();
 
       if (search === 'notfoto' || search === 'notfoto*') {
@@ -889,14 +987,31 @@
 
       notfotoToken++;
 
-      filteredProducts = products.filter(p =>
-        !search ||
-        p.name.toLowerCase().includes(search) ||
-        p.code.toLowerCase().includes(search)
-      );
-      document.getElementById('status').textContent =
-        search ? `Знайдено: ${filteredProducts.length}` : `✅ Завантажено ${products.length} товарів`;
+      filteredProducts = products.filter(p => {
+        const matchSearch = !search ||
+          p.name.toLowerCase().includes(search) ||
+          p.code.toLowerCase().includes(search);
+
+        let matchAttr = true;
+        if (attrFilter === 'new') matchAttr = p.isNew;
+        else if (attrFilter === 'sale') matchAttr = p.isSale;
+        else if (attrFilter === 'action') matchAttr = p.isAction;
+
+        return matchSearch && matchAttr;
+      });
+
+      const status = document.getElementById('status');
+      if (search || attrFilter !== 'all') {
+        status.textContent = `Знайдено: ${filteredProducts.length}`;
+      } else {
+        status.textContent = `✅ Завантажено ${products.length} товарів`;
+      }
+
       resetAndRender();
+    }
+
+    function filterProducts() {
+      applyFilters();
     }
 
     function showImage(src) {
@@ -935,7 +1050,9 @@
 
     function updateCartCount() {
       const count = cart.reduce((s, i) => s + i.qty, 0);
+      const sum = cart.reduce((s, i) => s + i.price * i.qty, 0);
       document.getElementById('cart-count').textContent = count;
+      document.getElementById('cart-header-sum').textContent = sum + ' грн';
     }
 
     function toggleCart() {
@@ -988,6 +1105,7 @@
     function showOrderForm() {
       if (cart.length === 0) return alert('Кошик порожній!');
       document.getElementById('cart-modal').classList.remove('show');
+      loadSavedClientName();
       document.getElementById('order-modal').classList.add('show');
     }
 
@@ -1000,6 +1118,7 @@
       const clientName = document.getElementById('client-name').value.trim();
       if (!clientName) return alert('Введіть назву клієнта!');
       const note = document.getElementById('note').value.trim();
+      saveClientName(clientName);
 
       let message = `🛒 Нове замовлення\n\n`;
       message += `👤 Клієнт: ${clientName}\n`;
@@ -1056,10 +1175,15 @@
 
     window.onload = function() {
       updatePhotoVersionButton();
+      updateFilterChips();
+      loadSavedClientName();
       loadData();
       document.getElementById('search').addEventListener('input', function () {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(filterProducts, 300);
+      });
+      document.getElementById('client-name').addEventListener('change', function () {
+        saveClientName(this.value.trim());
       });
     };
   </script>
