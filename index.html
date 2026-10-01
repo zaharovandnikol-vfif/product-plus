@@ -452,6 +452,10 @@
       font-size: 1rem;
       cursor: pointer;
     }
+    .btn-cancel:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .btn-submit {
       flex: 1;
       padding: 14px;
@@ -464,6 +468,10 @@
       cursor: pointer;
     }
     .btn-submit:hover { background: #15803d; }
+    .btn-submit:disabled {
+      background: #86efac;
+      cursor: not-allowed;
+    }
 
     #image-modal {
       display: none;
@@ -584,8 +592,8 @@
           <input class="form-input" type="text" id="client-name" placeholder="Назва клієнта (ФОП або магазин)" required>
           <textarea class="form-textarea" id="note" placeholder="Примітка до замовлення (необов'язково)" rows="4"></textarea>
           <div class="form-actions">
-            <button type="button" class="btn-cancel" onclick="hideOrderForm()">Скасувати</button>
-            <button type="submit" class="btn-submit">Відправити замовлення</button>
+            <button type="button" class="btn-cancel" id="order-cancel-btn" onclick="hideOrderForm()">Скасувати</button>
+            <button type="submit" class="btn-submit" id="order-submit-btn">Відправити замовлення</button>
           </div>
         </form>
       </div>
@@ -612,6 +620,7 @@
     let searchTimer = null;
     let notfotoToken = 0;
     let attrFilter = 'all';
+    let isSubmitting = false;
     const PAGE_SIZE = 40;
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
@@ -655,6 +664,16 @@
       try {
         if (name) localStorage.setItem(CLIENT_NAME_KEY, name);
       } catch (e) {}
+    }
+
+    function setOrderFormBusy(busy) {
+      const submitBtn = document.getElementById('order-submit-btn');
+      const cancelBtn = document.getElementById('order-cancel-btn');
+      if (submitBtn) {
+        submitBtn.disabled = busy;
+        submitBtn.textContent = busy ? 'Надсилання...' : 'Відправити замовлення';
+      }
+      if (cancelBtn) cancelBtn.disabled = busy;
     }
 
     function splitTelegramMessage(text, maxLen) {
@@ -1105,21 +1124,33 @@
 
     function showOrderForm() {
       if (cart.length === 0) return alert('Кошик порожній!');
+      if (isSubmitting) return;
       document.getElementById('cart-modal').classList.remove('show');
       loadSavedClientName();
+      setOrderFormBusy(false);
       document.getElementById('order-modal').classList.add('show');
     }
 
     function hideOrderForm() {
+      if (isSubmitting) return;
       document.getElementById('order-modal').classList.remove('show');
     }
 
     async function submitOrder(e) {
       e.preventDefault();
+      if (isSubmitting) return;
+
       const clientName = document.getElementById('client-name').value.trim();
       if (!clientName) return alert('Введіть назву клієнта!');
+      if (cart.length === 0) return alert('Кошик порожній!');
+
       const note = document.getElementById('note').value.trim();
       saveClientName(clientName);
+
+      isSubmitting = true;
+      setOrderFormBusy(true);
+
+      const cartSnapshot = cart.map(item => ({ ...item }));
 
       let message = `🛒 Нове замовлення\n\n`;
       message += `👤 Клієнт: ${clientName}\n`;
@@ -1128,7 +1159,7 @@
       message += `----------------------------------------\n`;
 
       let total = 0;
-      cart.forEach(item => {
+      cartSnapshot.forEach(item => {
         const sum = item.price * item.qty;
         total += sum;
         message += `${item.code} | ${item.name}\n`;
@@ -1159,12 +1190,16 @@
       telegramOk = await sendTelegramMessage(message);
 
       if (emailOk || telegramOk) {
-        alert('✅ Замовлення успішно відправлено!');
         cart = [];
         updateCartCount();
+        isSubmitting = false;
+        setOrderFormBusy(false);
         hideOrderForm();
         document.getElementById('cart-modal').classList.remove('show');
+        alert('✅ Замовлення успішно відправлено!');
       } else {
+        isSubmitting = false;
+        setOrderFormBusy(false);
         alert('Помилка відправки. Спробуйте пізніше.');
       }
     }
