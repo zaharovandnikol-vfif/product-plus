@@ -99,6 +99,12 @@
       padding-bottom: 12px;
     }
     .contacts strong { color: white; }
+    .contacts a.email-link {
+      color: white;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .contacts a.email-link:hover { color: #bfdbfe; }
 
     .search-bar {
       background: white;
@@ -525,6 +531,13 @@
           <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
           <span><i class="fas fa-clock"></i> Графік роботи: <strong>8:30 – 19:00</strong></span>
           <span><i class="fas fa-location-dot"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
+          <span>
+            <i class="fas fa-envelope"></i>
+            Пошта:
+            <a class="email-link" href="mailto:romaproduktplusopt@gmail.com" title="Для зв'язку з нами та для пропозицій">
+              <strong>romaproduktplusopt@gmail.com</strong>
+            </a>
+          </span>
         </div>
       </div>
     </header>
@@ -611,6 +624,7 @@
     const PLACEHOLDER_KEY = 'placeholder';
     const PHOTO_VERSION_KEY = 'product_plus_photo_v';
     const CLIENT_NAME_KEY = 'product_plus_client_name';
+    const CART_KEY = 'product_plus_cart';
 
     let products = [];
     let filteredProducts = [];
@@ -663,6 +677,37 @@
     function saveClientName(name) {
       try {
         if (name) localStorage.setItem(CLIENT_NAME_KEY, name);
+      } catch (e) {}
+    }
+
+    function saveCart() {
+      try {
+        localStorage.setItem(CART_KEY, JSON.stringify(cart));
+      } catch (e) {}
+    }
+
+    function loadCart() {
+      try {
+        const raw = localStorage.getItem(CART_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) {
+          cart = data.filter(item =>
+            item &&
+            item.id != null &&
+            item.name &&
+            typeof item.price === 'number' &&
+            item.qty > 0
+          );
+        }
+      } catch (e) {
+        cart = [];
+      }
+    }
+
+    function clearCartStorage() {
+      try {
+        localStorage.removeItem(CART_KEY);
       } catch (e) {}
     }
 
@@ -1065,6 +1110,7 @@
       if (existing) existing.qty += qty;
       else cart.push({ ...product, qty });
       updateCartCount();
+      saveCart();
       alert(`✅ ${product.name} (${qty} шт.) додано в кошик`);
     }
 
@@ -1114,12 +1160,14 @@
       cart[index].qty = parseInt(newQty) || 1;
       renderCart();
       updateCartCount();
+      saveCart();
     }
 
     function removeFromCart(index) {
       cart.splice(index, 1);
       renderCart();
       updateCartCount();
+      saveCart();
     }
 
     function showOrderForm() {
@@ -1191,6 +1239,7 @@
 
       if (emailOk || telegramOk) {
         cart = [];
+        clearCartStorage();
         updateCartCount();
         isSubmitting = false;
         setOrderFormBusy(false);
@@ -1213,6 +1262,8 @@
       updatePhotoVersionButton();
       updateFilterChips();
       loadSavedClientName();
+      loadCart();
+      updateCartCount();
       loadData();
       document.getElementById('search').addEventListener('input', function () {
         clearTimeout(searchTimer);
