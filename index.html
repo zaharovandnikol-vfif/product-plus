@@ -20,11 +20,19 @@
       padding: 0 16px;
     }
 
-    header {
+    .sticky-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
       background: #1d4ed8;
-      color: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
     }
+    .sticky-bar .logo,
+    .sticky-bar .logo i {
+      color: #fff !important;
+    }
+
     .header-inner {
       display: flex;
       justify-content: space-between;
@@ -40,8 +48,11 @@
       gap: 10px;
       cursor: pointer;
       user-select: none;
+      color: #fff;
     }
     .logo:hover { opacity: 0.9; }
+    .logo i { color: #fff; }
+
     .cart-btn {
       position: relative;
       background: #2563eb;
@@ -84,6 +95,7 @@
       align-items: center;
       justify-content: center;
     }
+
     .contacts {
       display: flex;
       flex-wrap: wrap;
@@ -100,23 +112,28 @@
     }
     .contacts a.email-link:hover { color: #bfdbfe; }
 
-    /* Sticky: logo row + search + filters only */
-    .sticky-bar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
+    /* Mobile-only contacts block (scrolls away) */
+    .contacts-mobile {
+      display: none;
       background: #1d4ed8;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      color: #dbeafe;
     }
-    .sticky-bar .header-inner {
-      padding-top: 12px;
-      padding-bottom: 10px;
+    .contacts-mobile .contacts {
+      padding-top: 10px;
     }
+
+    /* Desktop contacts inside sticky header */
+    .contacts-desktop {
+      display: flex;
+    }
+
     .search-bar {
       background: white;
       border-bottom: 1px solid #e5e7eb;
     }
-    .search-wrap { padding: 10px 0 10px; }
+    .search-wrap {
+      padding: 12px 0 12px;
+    }
     #search {
       width: 100%;
       padding: 12px 16px;
@@ -129,13 +146,16 @@
 
     .filters-row {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 18px;
     }
     #group-filter {
-      width: 100%;
-      padding: 10px 12px;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 10px 36px 10px 12px;
       border: 1px solid #d1d5db;
       border-radius: 12px;
       font-size: 0.95rem;
@@ -147,20 +167,14 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 14px center;
-      padding-right: 36px;
     }
     #group-filter:focus { border-color: #3b82f6; }
 
     .filter-chips {
       display: flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: 8px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding-bottom: 2px;
     }
-    .filter-chips::-webkit-scrollbar { display: none; }
     .filter-chip {
       border: 1px solid #d1d5db;
       background: #fff;
@@ -171,7 +185,6 @@
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
-      flex-shrink: 0;
     }
     .filter-chip:hover { border-color: #93c5fd; }
     .filter-chip.active {
@@ -249,18 +262,9 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
       white-space: nowrap;
     }
-    .badge-new {
-      background: #facc15;
-      color: #713f12;
-    }
-    .badge-sale {
-      background: #ef4444;
-      color: #fff;
-    }
-    .badge-action {
-      background: #b91c1c;
-      color: #fff;
-    }
+    .badge-new { background: #facc15; color: #713f12; }
+    .badge-sale { background: #ef4444; color: #fff; }
+    .badge-action { background: #b91c1c; color: #fff; }
     .product-info { flex: 1; min-width: 180px; }
     .product-code {
       font-size: 0.85rem;
@@ -492,10 +496,7 @@
       font-size: 1rem;
       cursor: pointer;
     }
-    .btn-cancel:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
+    .btn-cancel:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-submit {
       flex: 1;
       padding: 14px;
@@ -508,10 +509,7 @@
       cursor: pointer;
     }
     .btn-submit:hover { background: #15803d; }
-    .btn-submit:disabled {
-      background: #86efac;
-      cursor: not-allowed;
-    }
+    .btn-submit:disabled { background: #86efac; cursor: not-allowed; }
 
     #image-modal {
       display: none;
@@ -531,44 +529,66 @@
       transition: opacity 0.15s ease;
     }
 
-    /* Desktop: filters in one row */
-    @media (min-width: 768px) {
-      .filters-row {
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      #group-filter {
-        width: auto;
-        min-width: 220px;
-        max-width: 320px;
-      }
-      .filter-chips {
-        flex-wrap: wrap;
-        overflow-x: visible;
-      }
-    }
+    /* ===== MOBILE ONLY ===== */
+    @media (max-width: 767px) {
+      .contacts-mobile { display: block; }
+      .contacts-desktop { display: none !important; }
 
-    @media (max-width: 640px) {
+      .container {
+        padding: 0 14px;
+      }
       .logo { font-size: 1.35rem; }
-      .product-card { padding: 14px; }
-      .price-value { font-size: 1.2rem; }
-      .contacts { font-size: 0.8rem; gap: 6px 16px; }
       .cart-btn { padding: 8px 12px; }
       .cart-btn-sum { font-size: 0.75rem; }
-      .search-wrap { padding: 8px 0 10px; }
-      #search { padding: 11px 14px; font-size: 1rem; }
-      .filter-chip { padding: 7px 12px; font-size: 0.82rem; }
+
+      .search-wrap {
+        padding: 10px 4px 12px;
+      }
+      #search {
+        padding: 11px 14px;
+        font-size: 1rem;
+      }
+
+      .filters-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-top: 12px;
+        padding: 0 2px;
+      }
+      #group-filter {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+      }
+      .filter-chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 8px;
+        padding: 0 2px 2px;
+      }
+      .filter-chips::-webkit-scrollbar { display: none; }
+      .filter-chip {
+        flex-shrink: 0;
+        padding: 7px 12px;
+        font-size: 0.82rem;
+      }
+
+      .product-card { padding: 14px; }
+      .price-value { font-size: 1.2rem; }
       .product-info { min-width: 140px; }
+      .contacts { font-size: 0.8rem; gap: 6px 16px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Contacts: scroll away on mobile -->
-  <header>
+  <!-- Mobile: contacts scroll away -->
+  <div class="contacts-mobile">
     <div class="container">
-      <div class="contacts" style="padding-top: 10px;">
+      <div class="contacts">
         <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
         <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
         <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
@@ -583,9 +603,8 @@
         </span>
       </div>
     </div>
-  </header>
+  </div>
 
-  <!-- Sticky: logo + cart + search + filters -->
   <div class="sticky-bar">
     <div class="container">
       <div class="header-inner">
@@ -601,7 +620,24 @@
           <span id="cart-count">0</span>
         </button>
       </div>
+
+      <!-- Desktop: contacts stay in blue sticky header -->
+      <div class="contacts contacts-desktop">
+        <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
+        <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
+        <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
+        <span><i class="fas fa-clock"></i> Графік роботи: <strong>8:30 – 19:00</strong></span>
+        <span><i class="fas fa-location-dot"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
+        <span>
+          <i class="fas fa-envelope"></i>
+          Пошта:
+          <a class="email-link" href="mailto:romaproduktplusopt@gmail.com" title="Для зв'язку з нами та для пропозицій">
+            <strong>romaproduktplusopt@gmail.com</strong>
+          </a>
+        </span>
+      </div>
     </div>
+
     <div class="search-bar">
       <div class="container search-wrap">
         <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару...">
@@ -805,21 +841,16 @@
 
     function splitTelegramMessage(text, maxLen) {
       if (text.length <= maxLen) return [text];
-
       const lines = text.split('\n');
       const chunks = [];
       let current = '';
-
       for (const line of lines) {
         const piece = current ? current + '\n' + line : line;
-
         if (piece.length <= maxLen) {
           current = piece;
           continue;
         }
-
         if (current) chunks.push(current);
-
         if (line.length <= maxLen) {
           current = line;
         } else {
@@ -829,7 +860,6 @@
           current = '';
         }
       }
-
       if (current) chunks.push(current);
       return chunks.length ? chunks : [text.slice(0, maxLen)];
     }
@@ -837,12 +867,10 @@
     async function sendTelegramMessage(fullMessage) {
       const chunks = splitTelegramMessage(fullMessage, TELEGRAM_MAX_LEN);
       let allOk = true;
-
       for (let i = 0; i < chunks.length; i++) {
         const bodyText = chunks.length > 1
           ? `📄 Частина ${i + 1}/${chunks.length}\n\n${chunks[i]}`
           : chunks[i];
-
         try {
           const tgRes = await fetch(TELEGRAM_WORKER_URL, {
             method: 'POST',
@@ -854,7 +882,6 @@
           allOk = false;
         }
       }
-
       return allOk;
     }
 
@@ -864,7 +891,6 @@
       const groups = [...new Set(products.map(p => p.group).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, 'uk')
       );
-
       select.innerHTML = '<option value="">Усі групи</option>';
       groups.forEach(g => {
         const opt = document.createElement('option');
@@ -872,7 +898,6 @@
         opt.textContent = g;
         select.appendChild(opt);
       });
-
       if (current && groups.includes(current)) {
         select.value = current;
       } else {
@@ -884,7 +909,6 @@
     async function loadData(forceRefresh = false) {
       const status = document.getElementById('status');
       status.textContent = 'Завантаження каталогу...';
-
       if (!forceRefresh) {
         try {
           const cached = localStorage.getItem(CACHE_KEY);
@@ -902,20 +926,17 @@
       } else {
         try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
       }
-
       try {
         const csvUrl = "https://docs.google.com/spreadsheets/d/15vBAsDOUfPz_WVTK1brfWIDAUDFoN88lJPMyDbUZaE8/export?format=csv";
         const response = await fetch(csvUrl);
         const text = await response.text();
         products = parseCSV(text);
-
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({
             data: products,
             timestamp: Date.now()
           }));
         } catch (e) {}
-
         rebuildGroupFilter();
         applyFilters();
         status.textContent = forceRefresh
@@ -954,20 +975,16 @@
       const lines = text.trim().split('\n');
       const result = [];
       let currentGroup = "";
-
       for (let i = 1; i < lines.length; i++) {
         let line = lines[i].trim();
         if (!line) continue;
-
         line = line.replace(/"([^"]*)"/g, m => m.replace(/,/g, '§'));
         const cells = line.split(',').map(c => c.replace(/§/g, ',').replace(/^"|"$/g, '').trim());
-
         const groupCell = [cells[0], cells[1], cells[2]].find(c => c && c.includes('ТМЦ /'));
         if (groupCell) {
           currentGroup = groupCell.replace(/.*ТМЦ\s*\/\s*/i, '').trim();
           continue;
         }
-
         if (cells[2]) {
           let priceCol = 4;
           let price = parsePrice(cells[4]);
@@ -975,9 +992,7 @@
             price = parsePrice(cells[3]);
             priceCol = 3;
           }
-
           const attrs = parseAttributes(cells[priceCol + 1]);
-
           if (price > 0) {
             result.push({
               id: cells[1] || String(i),
@@ -1009,24 +1024,17 @@
       const token = ++notfotoToken;
       const missing = [];
       const batchSize = 12;
-
       status.textContent = 'Режим notfoto: перевірка фото...';
-
       for (let i = 0; i < products.length; i += batchSize) {
         if (token !== notfotoToken) return;
-
         const batch = products.slice(i, i + batchSize);
         const results = await Promise.all(batch.map(p => checkPhotoExists(p.code)));
-
         batch.forEach((p, idx) => {
           if (!results[idx]) missing.push(p);
         });
-
         status.textContent = `Режим notfoto: перевірка ${Math.min(i + batchSize, products.length)}/${products.length}... знайдено без фото: ${missing.length}`;
       }
-
       if (token !== notfotoToken) return;
-
       filteredProducts = missing;
       status.textContent = `🔧 Режим notfoto: без фото — ${missing.length} з ${products.length}`;
       resetAndRender();
@@ -1035,7 +1043,6 @@
     function createProductCard(p) {
       const card = document.createElement('div');
       card.className = 'product-card';
-
       const img = document.createElement('img');
       img.alt = p.name;
       img.className = 'product-img';
@@ -1044,10 +1051,8 @@
       img.dataset.fileKey = String(p.code);
       img.dataset.isPlaceholder = '0';
       img.src = ikUrl(IK_CARD_TR, p.code);
-
       const badges = document.createElement('div');
       badges.className = 'badges';
-
       if (p.isNew) {
         const b = document.createElement('span');
         b.className = 'badge-new';
@@ -1066,7 +1071,6 @@
         b.textContent = 'АКЦІЯ!';
         badges.appendChild(b);
       }
-
       img.onerror = function () {
         this.dataset.isPlaceholder = '1';
         this.dataset.fileKey = PLACEHOLDER_KEY;
@@ -1075,14 +1079,12 @@
           this.style.visibility = 'hidden';
         };
       };
-
       img.onclick = function () {
         if (this.style.visibility === 'hidden') return;
         if (this.dataset.isPlaceholder === '1') return;
         const fileKey = this.dataset.fileKey || String(p.code);
         showImage(ikUrl(IK_MODAL_TR, fileKey));
       };
-
       card.innerHTML = `
         <div class="photo-slot"></div>
         <div class="product-info">
@@ -1100,7 +1102,6 @@
           </button>
         </div>
       `;
-
       const slot = card.querySelector('.photo-slot');
       if (badges.childNodes.length) slot.appendChild(badges);
       slot.appendChild(img);
@@ -1116,13 +1117,10 @@
     function loadMore() {
       const container = document.getElementById('products');
       const next = filteredProducts.slice(displayedCount, displayedCount + PAGE_SIZE);
-
       next.forEach(p => {
         container.appendChild(createProductCard(p));
       });
-
       displayedCount += next.length;
-
       const btn = document.getElementById('load-more');
       if (displayedCount < filteredProducts.length) {
         btn.style.display = 'inline-block';
@@ -1158,36 +1156,28 @@
 
     function applyFilters() {
       const search = document.getElementById('search').value.toLowerCase().trim();
-
       if (search === 'notfoto' || search === 'notfoto*') {
         findProductsWithoutPhotos();
         return;
       }
-
       notfotoToken++;
-
       filteredProducts = products.filter(p => {
         const matchSearch = !search ||
           p.name.toLowerCase().includes(search) ||
           p.code.toLowerCase().includes(search);
-
         let matchAttr = true;
         if (attrFilter === 'new') matchAttr = p.isNew;
         else if (attrFilter === 'sale') matchAttr = p.isSale;
         else if (attrFilter === 'action') matchAttr = p.isAction;
-
         const matchGroup = !groupFilter || p.group === groupFilter;
-
         return matchSearch && matchAttr && matchGroup;
       });
-
       const status = document.getElementById('status');
       if (search || attrFilter !== 'all' || groupFilter) {
         status.textContent = `Знайдено: ${filteredProducts.length}`;
       } else {
         status.textContent = `✅ Завантажено ${products.length} товарів`;
       }
-
       resetAndRender();
     }
 
@@ -1199,20 +1189,16 @@
       const modal = document.getElementById('image-modal');
       const img = document.getElementById('modal-image');
       const requestId = ++modalRequestId;
-
       img.style.opacity = '0';
       img.removeAttribute('src');
-
       img.onload = function () {
         if (requestId !== modalRequestId) return;
         img.style.opacity = '1';
       };
-
       img.onerror = function () {
         if (requestId !== modalRequestId) return;
         img.style.opacity = '1';
       };
-
       img.src = src;
       modal.classList.add('show');
     }
@@ -1246,13 +1232,11 @@
       const container = document.getElementById('cart-items');
       container.innerHTML = '';
       let total = 0;
-
       if (cart.length === 0) {
         container.innerHTML = '<p style="text-align:center;color:#6b7280;padding:40px 0;">Кошик порожній</p>';
         document.getElementById('cart-total').textContent = '0 грн';
         return;
       }
-
       cart.forEach((item, index) => {
         const sum = item.price * item.qty;
         total += sum;
@@ -1304,30 +1288,23 @@
     async function submitOrder(e) {
       e.preventDefault();
       if (isSubmitting) return;
-
       const clientName = document.getElementById('client-name').value.trim();
       const clientEmail = document.getElementById('client-email').value.trim();
       const note = document.getElementById('note').value.trim();
-
       if (!clientName) return alert('Введіть назву клієнта!');
       if (!note) return alert('Введіть примітку до замовлення!');
       if (cart.length === 0) return alert('Кошик порожній!');
-
       saveClientName(clientName);
       saveClientEmail(clientEmail);
-
       isSubmitting = true;
       setOrderFormBusy(true);
-
       const cartSnapshot = cart.map(item => ({ ...item }));
-
       let message = `🛒 Нове замовлення\n\n`;
       message += `👤 Клієнт: ${clientName}\n`;
       if (clientEmail) message += `✉️ Пошта: ${clientEmail}\n`;
       message += `📅 Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
       message += `📦 Товари:\n`;
       message += `----------------------------------------\n`;
-
       let total = 0;
       cartSnapshot.forEach(item => {
         const sum = item.price * item.qty;
@@ -1338,16 +1315,13 @@
       });
       message += `\n💰 Всього до сплати: ${total} грн\n`;
       message += `\n📝 Примітка: ${note}`;
-
       let emailOk = false;
       let telegramOk = false;
-
       try {
         const formData = new FormData();
         formData.append('message', message);
         formData.append('_subject', `Замовлення від ${clientName}`);
         if (clientEmail) formData.append('replyto', clientEmail);
-
         const emailRes = await fetch('https://formspree.io/f/mlgqrbdw', {
           method: 'POST',
           body: formData,
@@ -1357,9 +1331,7 @@
       } catch (err) {
         emailOk = false;
       }
-
       telegramOk = await sendTelegramMessage(message);
-
       if (emailOk || telegramOk) {
         cart = [];
         clearCartStorage();
