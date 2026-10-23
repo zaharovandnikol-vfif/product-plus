@@ -122,12 +122,31 @@
     }
     #search:focus { border-color: #3b82f6; }
 
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 0 0 12px;
+      align-items: center;
+    }
+    #group-filter {
+      min-width: 200px;
+      max-width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      background: #fff;
+      color: #374151;
+      outline: none;
+    }
+    #group-filter:focus { border-color: #3b82f6; }
+
     .filter-chips {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 18px;
-      padding: 0 0 12px;
     }
     .filter-chip {
       border: 1px solid #d1d5db;
@@ -504,6 +523,7 @@
       .contacts { font-size: 0.8rem; }
       .cart-btn { padding: 8px 12px; }
       .cart-btn-sum { font-size: 0.75rem; }
+      #group-filter { width: 100%; }
     }
   </style>
 </head>
@@ -545,11 +565,16 @@
     <div class="search-bar">
       <div class="container search-wrap">
         <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару...">
-        <div class="filter-chips">
-          <button type="button" class="filter-chip active" data-filter="all" onclick="setAttrFilter('all')">Усі</button>
-          <button type="button" class="filter-chip" data-filter="new" onclick="setAttrFilter('new')">Новинки</button>
-          <button type="button" class="filter-chip" data-filter="action" onclick="setAttrFilter('action')">Акції</button>
-          <button type="button" class="filter-chip" data-filter="sale" onclick="setAttrFilter('sale')">Розпродаж</button>
+        <div class="filters-row">
+          <select id="group-filter" onchange="setGroupFilter(this.value)">
+            <option value="">Усі групи</option>
+          </select>
+          <div class="filter-chips">
+            <button type="button" class="filter-chip active" data-filter="all" onclick="setAttrFilter('all')">Усі</button>
+            <button type="button" class="filter-chip" data-filter="new" onclick="setAttrFilter('new')">Новинки</button>
+            <button type="button" class="filter-chip" data-filter="action" onclick="setAttrFilter('action')">Акції</button>
+            <button type="button" class="filter-chip" data-filter="sale" onclick="setAttrFilter('sale')">Розпродаж</button>
+          </div>
         </div>
       </div>
     </div>
@@ -603,7 +628,8 @@
       <div class="modal-body">
         <form id="order-form" onsubmit="submitOrder(event)">
           <input class="form-input" type="text" id="client-name" placeholder="Назва клієнта (ФОП або магазин)" required>
-          <textarea class="form-textarea" id="note" placeholder="Примітка до замовлення (необов'язково)" rows="4"></textarea>
+          <input class="form-input" type="email" id="client-email" placeholder="Пошта (необов'язково)">
+          <textarea class="form-textarea" id="note" placeholder="Примітка до замовлення (обов'язково)" rows="4" required></textarea>
           <div class="form-actions">
             <button type="button" class="btn-cancel" id="order-cancel-btn" onclick="hideOrderForm()">Скасувати</button>
             <button type="submit" class="btn-submit" id="order-submit-btn">Відправити замовлення</button>
@@ -624,6 +650,7 @@
     const PLACEHOLDER_KEY = 'placeholder';
     const PHOTO_VERSION_KEY = 'product_plus_photo_v';
     const CLIENT_NAME_KEY = 'product_plus_client_name';
+    const CLIENT_EMAIL_KEY = 'product_plus_client_email';
     const CART_KEY = 'product_plus_cart';
 
     let products = [];
@@ -634,6 +661,7 @@
     let searchTimer = null;
     let notfotoToken = 0;
     let attrFilter = 'all';
+    let groupFilter = '';
     let isSubmitting = false;
     const PAGE_SIZE = 40;
     const CACHE_KEY = 'product_plus_cache';
@@ -674,9 +702,23 @@
       } catch (e) {}
     }
 
+    function loadSavedClientEmail() {
+      try {
+        const email = localStorage.getItem(CLIENT_EMAIL_KEY);
+        if (email) document.getElementById('client-email').value = email;
+      } catch (e) {}
+    }
+
     function saveClientName(name) {
       try {
         if (name) localStorage.setItem(CLIENT_NAME_KEY, name);
+      } catch (e) {}
+    }
+
+    function saveClientEmail(email) {
+      try {
+        if (email) localStorage.setItem(CLIENT_EMAIL_KEY, email);
+        else localStorage.removeItem(CLIENT_EMAIL_KEY);
       } catch (e) {}
     }
 
@@ -776,6 +818,29 @@
       return allOk;
     }
 
+    function rebuildGroupFilter() {
+      const select = document.getElementById('group-filter');
+      const current = groupFilter;
+      const groups = [...new Set(products.map(p => p.group).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, 'uk')
+      );
+
+      select.innerHTML = '<option value="">Усі групи</option>';
+      groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        select.appendChild(opt);
+      });
+
+      if (current && groups.includes(current)) {
+        select.value = current;
+      } else {
+        groupFilter = '';
+        select.value = '';
+      }
+    }
+
     async function loadData(forceRefresh = false) {
       const status = document.getElementById('status');
       status.textContent = 'Завантаження каталогу...';
@@ -787,6 +852,7 @@
             const { data, timestamp } = JSON.parse(cached);
             if (Date.now() - timestamp < CACHE_TTL && Array.isArray(data) && data.length > 0) {
               products = data;
+              rebuildGroupFilter();
               applyFilters();
               status.textContent = `✅ Завантажено ${products.length} товарів (з кешу)`;
               return;
@@ -810,6 +876,7 @@
           }));
         } catch (e) {}
 
+        rebuildGroupFilter();
         applyFilters();
         status.textContent = forceRefresh
           ? `✅ Каталог оновлено: ${products.length} товарів`
@@ -823,6 +890,7 @@
       document.getElementById('status').textContent = 'Оновлення каталогу...';
       document.getElementById('search').value = '';
       attrFilter = 'all';
+      groupFilter = '';
       updateFilterChips();
       loadData(true);
     }
@@ -854,8 +922,9 @@
         line = line.replace(/"([^"]*)"/g, m => m.replace(/,/g, '§'));
         const cells = line.split(',').map(c => c.replace(/§/g, ',').replace(/^"|"$/g, '').trim());
 
-        if (cells[1] && cells[1].includes("ТМЦ /")) {
-          currentGroup = cells[1].replace("ТМЦ /", "").trim();
+        const groupCell = [cells[0], cells[1], cells[2]].find(c => c && c.includes('ТМЦ /'));
+        if (groupCell) {
+          currentGroup = groupCell.replace(/.*ТМЦ\s*\/\s*/i, '').trim();
           continue;
         }
 
@@ -1042,6 +1111,11 @@
       applyFilters();
     }
 
+    function setGroupFilter(value) {
+      groupFilter = value || '';
+      applyFilters();
+    }
+
     function applyFilters() {
       const search = document.getElementById('search').value.toLowerCase().trim();
 
@@ -1062,11 +1136,13 @@
         else if (attrFilter === 'sale') matchAttr = p.isSale;
         else if (attrFilter === 'action') matchAttr = p.isAction;
 
-        return matchSearch && matchAttr;
+        const matchGroup = !groupFilter || p.group === groupFilter;
+
+        return matchSearch && matchAttr && matchGroup;
       });
 
       const status = document.getElementById('status');
-      if (search || attrFilter !== 'all') {
+      if (search || attrFilter !== 'all' || groupFilter) {
         status.textContent = `Знайдено: ${filteredProducts.length}`;
       } else {
         status.textContent = `✅ Завантажено ${products.length} товарів`;
@@ -1175,6 +1251,7 @@
       if (isSubmitting) return;
       document.getElementById('cart-modal').classList.remove('show');
       loadSavedClientName();
+      loadSavedClientEmail();
       setOrderFormBusy(false);
       document.getElementById('order-modal').classList.add('show');
     }
@@ -1189,11 +1266,15 @@
       if (isSubmitting) return;
 
       const clientName = document.getElementById('client-name').value.trim();
+      const clientEmail = document.getElementById('client-email').value.trim();
+      const note = document.getElementById('note').value.trim();
+
       if (!clientName) return alert('Введіть назву клієнта!');
+      if (!note) return alert('Введіть примітку до замовлення!');
       if (cart.length === 0) return alert('Кошик порожній!');
 
-      const note = document.getElementById('note').value.trim();
       saveClientName(clientName);
+      saveClientEmail(clientEmail);
 
       isSubmitting = true;
       setOrderFormBusy(true);
@@ -1202,6 +1283,7 @@
 
       let message = `🛒 Нове замовлення\n\n`;
       message += `👤 Клієнт: ${clientName}\n`;
+      if (clientEmail) message += `✉️ Пошта: ${clientEmail}\n`;
       message += `📅 Дата: ${new Date().toLocaleString('uk-UA')}\n\n`;
       message += `📦 Товари:\n`;
       message += `----------------------------------------\n`;
@@ -1215,7 +1297,7 @@
         message += `----------------------------------------\n`;
       });
       message += `\n💰 Всього до сплати: ${total} грн\n`;
-      if (note) message += `\n📝 Примітка: ${note}`;
+      message += `\n📝 Примітка: ${note}`;
 
       let emailOk = false;
       let telegramOk = false;
@@ -1224,6 +1306,7 @@
         const formData = new FormData();
         formData.append('message', message);
         formData.append('_subject', `Замовлення від ${clientName}`);
+        if (clientEmail) formData.append('replyto', clientEmail);
 
         const emailRes = await fetch('https://formspree.io/f/mlgqrbdw', {
           method: 'POST',
@@ -1245,6 +1328,7 @@
         setOrderFormBusy(false);
         hideOrderForm();
         document.getElementById('cart-modal').classList.remove('show');
+        document.getElementById('note').value = '';
         alert('✅ Замовлення успішно відправлено!');
       } else {
         isSubmitting = false;
@@ -1262,6 +1346,7 @@
       updatePhotoVersionButton();
       updateFilterChips();
       loadSavedClientName();
+      loadSavedClientEmail();
       loadCart();
       updateCartCount();
       loadData();
@@ -1271,6 +1356,9 @@
       });
       document.getElementById('client-name').addEventListener('change', function () {
         saveClientName(this.value.trim());
+      });
+      document.getElementById('client-email').addEventListener('change', function () {
+        saveClientEmail(this.value.trim());
       });
     };
   </script>
