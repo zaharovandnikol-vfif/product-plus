@@ -20,12 +20,6 @@
       padding: 0 16px;
     }
 
-    .sticky-top {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-
     header {
       background: #1d4ed8;
       color: white;
@@ -35,7 +29,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 0 8px;
+      padding: 14px 0 10px;
       gap: 12px;
     }
     .logo {
@@ -106,57 +100,78 @@
     }
     .contacts a.email-link:hover { color: #bfdbfe; }
 
+    /* Sticky: logo row + search + filters only */
+    .sticky-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #1d4ed8;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+    }
+    .sticky-bar .header-inner {
+      padding-top: 12px;
+      padding-bottom: 10px;
+    }
     .search-bar {
       background: white;
       border-bottom: 1px solid #e5e7eb;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-    .search-wrap { padding: 12px 0 8px; }
+    .search-wrap { padding: 10px 0 10px; }
     #search {
       width: 100%;
-      padding: 14px 18px;
+      padding: 12px 16px;
       font-size: 1.05rem;
       border: 1px solid #d1d5db;
-      border-radius: 16px;
+      border-radius: 14px;
       outline: none;
     }
     #search:focus { border-color: #3b82f6; }
 
     .filters-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 10px;
-      margin-top: 18px;
-      padding: 0 0 12px;
-      align-items: center;
+      margin-top: 10px;
     }
     #group-filter {
-      min-width: 200px;
-      max-width: 100%;
-      padding: 9px 12px;
+      width: 100%;
+      padding: 10px 12px;
       border: 1px solid #d1d5db;
       border-radius: 12px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       background: #fff;
       color: #374151;
       outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
     }
     #group-filter:focus { border-color: #3b82f6; }
 
     .filter-chips {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
     }
+    .filter-chips::-webkit-scrollbar { display: none; }
     .filter-chip {
       border: 1px solid #d1d5db;
       background: #fff;
       color: #374151;
       border-radius: 999px;
-      padding: 7px 14px;
+      padding: 8px 14px;
       font-size: 0.875rem;
       font-weight: 600;
       cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .filter-chip:hover { border-color: #93c5fd; }
     .filter-chip.active {
@@ -181,7 +196,7 @@
     }
 
     #products {
-      padding: 24px 0;
+      padding: 16px 0 24px;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -309,7 +324,7 @@
     #status {
       text-align: center;
       color: #6b7280;
-      padding: 24px 0 8px;
+      padding: 16px 0 8px;
       font-size: 0.9rem;
     }
 
@@ -516,52 +531,77 @@
       transition: opacity 0.15s ease;
     }
 
+    /* Desktop: filters in one row */
+    @media (min-width: 768px) {
+      .filters-row {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      #group-filter {
+        width: auto;
+        min-width: 220px;
+        max-width: 320px;
+      }
+      .filter-chips {
+        flex-wrap: wrap;
+        overflow-x: visible;
+      }
+    }
+
     @media (max-width: 640px) {
       .logo { font-size: 1.35rem; }
       .product-card { padding: 14px; }
       .price-value { font-size: 1.2rem; }
-      .contacts { font-size: 0.8rem; }
+      .contacts { font-size: 0.8rem; gap: 6px 16px; }
       .cart-btn { padding: 8px 12px; }
       .cart-btn-sum { font-size: 0.75rem; }
-      #group-filter { width: 100%; }
+      .search-wrap { padding: 8px 0 10px; }
+      #search { padding: 11px 14px; font-size: 1rem; }
+      .filter-chip { padding: 7px 12px; font-size: 0.82rem; }
+      .product-info { min-width: 140px; }
     }
   </style>
 </head>
 <body>
 
-  <div class="sticky-top">
-    <header>
-      <div class="container">
-        <div class="header-inner">
-          <div class="logo" onclick="refreshCatalog()" title="Натисніть, щоб оновити каталог">
-            <i class="fas fa-store"></i> Продукт Плюс
-          </div>
-          <button class="cart-btn" onclick="toggleCart()">
-            <i class="fas fa-shopping-cart"></i>
-            <span class="cart-btn-text">
-              <span>Кошик</span>
-              <span class="cart-btn-sum" id="cart-header-sum">0 грн</span>
-            </span>
-            <span id="cart-count">0</span>
-          </button>
-        </div>
-        <div class="contacts">
-          <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
-          <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
-          <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
-          <span><i class="fas fa-clock"></i> Графік роботи: <strong>8:30 – 19:00</strong></span>
-          <span><i class="fas fa-location-dot"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
-          <span>
-            <i class="fas fa-envelope"></i>
-            Пошта:
-            <a class="email-link" href="mailto:romaproduktplusopt@gmail.com" title="Для зв'язку з нами та для пропозицій">
-              <strong>romaproduktplusopt@gmail.com</strong>
-            </a>
-          </span>
-        </div>
+  <!-- Contacts: scroll away on mobile -->
+  <header>
+    <div class="container">
+      <div class="contacts" style="padding-top: 10px;">
+        <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
+        <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
+        <span><i class="fas fa-truck"></i> Дні вивозу: <strong>Пн, Вт, Чт, Пт</strong></span>
+        <span><i class="fas fa-clock"></i> Графік роботи: <strong>8:30 – 19:00</strong></span>
+        <span><i class="fas fa-location-dot"></i> Адреса: <strong>м.Фастів, вул.Святобогородицька 1В (біля заправки ОККО)</strong></span>
+        <span>
+          <i class="fas fa-envelope"></i>
+          Пошта:
+          <a class="email-link" href="mailto:romaproduktplusopt@gmail.com" title="Для зв'язку з нами та для пропозицій">
+            <strong>romaproduktplusopt@gmail.com</strong>
+          </a>
+        </span>
       </div>
-    </header>
+    </div>
+  </header>
 
+  <!-- Sticky: logo + cart + search + filters -->
+  <div class="sticky-bar">
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo" onclick="refreshCatalog()" title="Натисніть, щоб оновити каталог">
+          <i class="fas fa-store"></i> Продукт Плюс
+        </div>
+        <button class="cart-btn" onclick="toggleCart()">
+          <i class="fas fa-shopping-cart"></i>
+          <span class="cart-btn-text">
+            <span>Кошик</span>
+            <span class="cart-btn-sum" id="cart-header-sum">0 грн</span>
+          </span>
+          <span id="cart-count">0</span>
+        </button>
+      </div>
+    </div>
     <div class="search-bar">
       <div class="container search-wrap">
         <input id="search" type="text" placeholder="🔍 Пошук по назві або коду товару...">
