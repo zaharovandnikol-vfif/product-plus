@@ -388,7 +388,7 @@
       display: block;
       border-radius: 14px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.22);
-      background: #fff;
+      background: transparent;
     }
     #ny-promo-close {
       position: absolute;
@@ -825,47 +825,38 @@
     }
 
     function hideNyPromo(manual) {
-      const el = document.getElementById('ny-promo');
-      if (!el) return;
-      el.classList.remove('show');
-      el.classList.add('hide');
-      el.setAttribute('aria-hidden', 'true');
-      if (nyPromoTimer) {
-        clearTimeout(nyPromoTimer);
-        nyPromoTimer = null;
-      }
-      if (manual) {
-        try { sessionStorage.setItem(NY_PROMO_SESSION_KEY, '1'); } catch (e) {}
-      }
-    }
+  const el = document.getElementById('ny-promo');
+  if (!el) return;
+  el.classList.remove('show');
+  el.classList.add('hide');
+  el.setAttribute('aria-hidden', 'true');
+  if (nyPromoTimer) {
+    clearTimeout(nyPromoTimer);
+    nyPromoTimer = null;
+  }
+}
 
     function maybeShowNyPromo() {
-      if (!isNyPromoPeriod()) return;
-      try {
-        if (sessionStorage.getItem(NY_PROMO_SESSION_KEY) === '1') return;
-      } catch (e) {}
+  if (!isNyPromoPeriod()) return;
 
-      const el = document.getElementById('ny-promo');
-      const img = document.getElementById('ny-promo-img');
-      if (!el || !img) return;
+  const el = document.getElementById('ny-promo');
+  const img = document.getElementById('ny-promo-img');
+  if (!el || !img) return;
 
-      img.src = ikUrl(IK_PROMO_TR, 'NY', 'png');
-      img.onerror = function () {
-        this.onerror = null;
-        this.src = `${IK_ENDPOINT}/${IK_FOLDER}/NY.png?v=${getPhotoVersion()}`;
-      };
+  img.src = ikUrl(IK_PROMO_TR, 'NY', 'png');
+  img.onerror = function () {
+    this.onerror = null;
+    this.src = `${IK_ENDPOINT}/${IK_FOLDER}/NY.png?v=${getPhotoVersion()}`;
+  };
 
-      requestAnimationFrame(() => {
-        el.classList.remove('hide');
-        el.classList.add('show');
-        el.setAttribute('aria-hidden', 'false');
-      });
+  requestAnimationFrame(() => {
+    el.classList.remove('hide');
+    el.classList.add('show');
+    el.setAttribute('aria-hidden', 'false');
+  });
 
-      try { sessionStorage.setItem(NY_PROMO_SESSION_KEY, '1'); } catch (e) {}
-
-      nyPromoTimer = setTimeout(() => hideNyPromo(false), 5000);
-    }
-
+  nyPromoTimer = setTimeout(() => hideNyPromo(false), 10000);
+}
     function loadSavedClientName() {
       try {
         const name = localStorage.getItem(CLIENT_NAME_KEY);
