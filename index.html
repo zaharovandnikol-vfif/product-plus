@@ -112,28 +112,19 @@
     }
     .contacts a.email-link:hover { color: #bfdbfe; }
 
-    /* Mobile-only contacts block (scrolls away) */
     .contacts-mobile {
       display: none;
       background: #1d4ed8;
       color: #dbeafe;
     }
-    .contacts-mobile .contacts {
-      padding-top: 10px;
-    }
-
-    /* Desktop contacts inside sticky header */
-    .contacts-desktop {
-      display: flex;
-    }
+    .contacts-mobile .contacts { padding-top: 10px; }
+    .contacts-desktop { display: flex; }
 
     .search-bar {
       background: white;
       border-bottom: 1px solid #e5e7eb;
     }
-    .search-wrap {
-      padding: 12px 0 12px;
-    }
+    .search-wrap { padding: 12px 0 12px; }
     #search {
       width: 100%;
       padding: 12px 16px;
@@ -368,6 +359,56 @@
     }
     #back-to-top:hover { background: #1d4ed8; }
 
+    /* Seasonal promo NY */
+    #ny-promo {
+      position: fixed;
+      right: 16px;
+      bottom: 90px;
+      z-index: 70;
+      width: min(220px, 42vw);
+      max-width: 240px;
+      transform: translateX(120%);
+      opacity: 0;
+      transition: transform 0.55s ease, opacity 0.55s ease;
+      pointer-events: none;
+    }
+    #ny-promo.show {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #ny-promo.hide {
+      transform: translateX(120%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    #ny-promo img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      background: #fff;
+    }
+    #ny-promo-close {
+      position: absolute;
+      top: -8px;
+      left: -8px;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: #1f2937;
+      color: #fff;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
     .modal-overlay {
       display: none;
       position: fixed;
@@ -529,25 +570,17 @@
       transition: opacity 0.15s ease;
     }
 
-    /* ===== MOBILE ONLY ===== */
     @media (max-width: 767px) {
       .contacts-mobile { display: block; }
       .contacts-desktop { display: none !important; }
 
-      .container {
-        padding: 0 14px;
-      }
+      .container { padding: 0 14px; }
       .logo { font-size: 1.35rem; }
       .cart-btn { padding: 8px 12px; }
       .cart-btn-sum { font-size: 0.75rem; }
 
-      .search-wrap {
-        padding: 10px 4px 12px;
-      }
-      #search {
-        padding: 11px 14px;
-        font-size: 1rem;
-      }
+      .search-wrap { padding: 10px 4px 12px; }
+      #search { padding: 11px 14px; font-size: 1rem; }
 
       .filters-row {
         flex-direction: column;
@@ -580,12 +613,17 @@
       .price-value { font-size: 1.2rem; }
       .product-info { min-width: 140px; }
       .contacts { font-size: 0.8rem; gap: 6px 16px; }
+
+      #ny-promo {
+        right: 12px;
+        bottom: 84px;
+        width: min(160px, 38vw);
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Mobile: contacts scroll away -->
   <div class="contacts-mobile">
     <div class="container">
       <div class="contacts">
@@ -621,7 +659,6 @@
         </button>
       </div>
 
-      <!-- Desktop: contacts stay in blue sticky header -->
       <div class="contacts contacts-desktop">
         <span><i class="fas fa-phone"></i> Рома: <strong>+380 68 688 78 94</strong></span>
         <span><i class="fas fa-phone"></i> Таня: <strong>+380 95 914 33 62</strong></span>
@@ -665,6 +702,11 @@
     <div class="admin-tools">
       <button id="photo-version-btn" type="button" onclick="cyclePhotoVersion()" title="Змінити версію фото (після заміни картинок)">фото v1</button>
     </div>
+  </div>
+
+  <div id="ny-promo" aria-hidden="true">
+    <button type="button" id="ny-promo-close" onclick="hideNyPromo(true)" title="Закрити">×</button>
+    <img id="ny-promo-img" alt="Новорічна пропозиція" loading="eager">
   </div>
 
   <button id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
@@ -723,11 +765,13 @@
     const IK_FOLDER = 'products';
     const IK_CARD_TR = 'tr:w-120,h-120,c-at_max,fo-auto,q-75,f-auto';
     const IK_MODAL_TR = 'tr:w-600,q-90,f-auto';
+    const IK_PROMO_TR = 'tr:w-280,q-85,f-auto';
     const PLACEHOLDER_KEY = 'placeholder';
     const PHOTO_VERSION_KEY = 'product_plus_photo_v';
     const CLIENT_NAME_KEY = 'product_plus_client_name';
     const CLIENT_EMAIL_KEY = 'product_plus_client_email';
     const CART_KEY = 'product_plus_cart';
+    const NY_PROMO_SESSION_KEY = 'product_plus_ny_promo_shown_2026';
 
     let products = [];
     let filteredProducts = [];
@@ -739,6 +783,7 @@
     let attrFilter = 'all';
     let groupFilter = '';
     let isSubmitting = false;
+    let nyPromoTimer = null;
     const PAGE_SIZE = 40;
     const CACHE_KEY = 'product_plus_cache';
     const CACHE_TTL = 1 * 60 * 60 * 1000;
@@ -767,8 +812,58 @@
       alert('Версія фото змінена на v' + next + '\n(використовуйте після заміни картинок у ImageKit)');
     }
 
-    function ikUrl(transform, fileKey) {
-      return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.webp?v=${getPhotoVersion()}`;
+    function ikUrl(transform, fileKey, ext) {
+      const extension = ext || 'webp';
+      return `${IK_ENDPOINT}/${transform}/${IK_FOLDER}/${fileKey}.${extension}?v=${getPhotoVersion()}`;
+    }
+
+    function isNyPromoPeriod() {
+      const now = new Date();
+      const start = new Date(2026, 10, 22, 0, 0, 0); // 22.11.2026
+      const end = new Date(2026, 11, 31, 23, 59, 59); // 31.12.2026
+      return now >= start && now <= end;
+    }
+
+    function hideNyPromo(manual) {
+      const el = document.getElementById('ny-promo');
+      if (!el) return;
+      el.classList.remove('show');
+      el.classList.add('hide');
+      el.setAttribute('aria-hidden', 'true');
+      if (nyPromoTimer) {
+        clearTimeout(nyPromoTimer);
+        nyPromoTimer = null;
+      }
+      if (manual) {
+        try { sessionStorage.setItem(NY_PROMO_SESSION_KEY, '1'); } catch (e) {}
+      }
+    }
+
+    function maybeShowNyPromo() {
+      if (!isNyPromoPeriod()) return;
+      try {
+        if (sessionStorage.getItem(NY_PROMO_SESSION_KEY) === '1') return;
+      } catch (e) {}
+
+      const el = document.getElementById('ny-promo');
+      const img = document.getElementById('ny-promo-img');
+      if (!el || !img) return;
+
+      img.src = ikUrl(IK_PROMO_TR, 'NY', 'png');
+      img.onerror = function () {
+        this.onerror = null;
+        this.src = `${IK_ENDPOINT}/${IK_FOLDER}/NY.png?v=${getPhotoVersion()}`;
+      };
+
+      requestAnimationFrame(() => {
+        el.classList.remove('hide');
+        el.classList.add('show');
+        el.setAttribute('aria-hidden', 'false');
+      });
+
+      try { sessionStorage.setItem(NY_PROMO_SESSION_KEY, '1'); } catch (e) {}
+
+      nyPromoTimer = setTimeout(() => hideNyPromo(false), 5000);
     }
 
     function loadSavedClientName() {
@@ -1362,6 +1457,7 @@
       loadCart();
       updateCartCount();
       loadData();
+      setTimeout(maybeShowNyPromo, 400);
       document.getElementById('search').addEventListener('input', function () {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(filterProducts, 300);
